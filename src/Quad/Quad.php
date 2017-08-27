@@ -56,7 +56,7 @@ class Quad {
 
             return $this->renderCompiled($compiled);
         } else {
-            $filename = $this->getOption('templates') . $filename;
+            $filename = $this->getOption('templates') . '/' . $filename;
             $template = @file_get_contents($filename);
 
             if ($template === false) {
