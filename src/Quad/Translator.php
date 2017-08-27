@@ -6,66 +6,66 @@ use \Nette\Utils\Tokenizer;
 
 class Translator {
 
-    const T_QUAD_BRACKET_START         = 1;
-    const T_QUAD_BRACKET_END           = 2;
-    const T_QUESTION                   = 3;
-    const T_AMPERSAND                  = 4;
-    const T_QUOTE                      = 5;
-    const T_EQUAL                      = 6;
-    const T_CACHED_SNIPPET_START       = 7;
-    const T_CACHED_SNIPPET_END         = 8;
-    const T_UNCACHED_SNIPPET_START     = 9;
-    const T_UNCACHED_SNIPPET_END       = 10;
-    const T_DOCUMENT_PLACEHOLDER_START = 11;
-    const T_DOCUMENT_PLACEHOLDER_END   = 12;
-    const T_PLACEHOLDER_START          = 13;
-    const T_PLACEHOLDER_END            = 14;
-    const T_BINDING                    = 15;
-    const T_COMMA                      = 16;
-    const T_SETTING_START              = 17;
-    const T_SETTING_END                = 18;
-    const T_CHUNK_START                = 19;
-    const T_CHUNK_END                  = 20;
-    const T_WHITESPACE                 = 1000;
-    const T_STRING                     = 1001;
-    const T_ANYTHING                   = 2000;
+    const T_QUAD_BRACKET_START     = 1;
+    const T_QUAD_BRACKET_END       = 2;
+    const T_QUESTION               = 3;
+    const T_AMPERSAND              = 4;
+    const T_QUOTE                  = 5;
+    const T_EQUAL                  = 6;
+    const T_CACHED_SNIPPET_START   = 7;
+    const T_CACHED_SNIPPET_END     = 8;
+    const T_UNCACHED_SNIPPET_START = 9;
+    const T_UNCACHED_SNIPPET_END   = 10;
+    const T_DOCUMENT_FIELD_START   = 11;
+    const T_DOCUMENT_FIELD_END     = 12;
+    const T_PLACEHOLDER_START      = 13;
+    const T_PLACEHOLDER_END        = 14;
+    const T_BINDING                = 15;
+    const T_COMMA                  = 16;
+    const T_SETTING_START          = 17;
+    const T_SETTING_END            = 18;
+    const T_CHUNK_START            = 19;
+    const T_CHUNK_END              = 20;
+    const T_WHITESPACE             = 1000;
+    const T_STRING                 = 1001;
+    const T_ANYTHING               = 2000;
 
     /**
      * Token symbols, used for error message only
      */
     private $symbols = [
-        self::T_CACHED_SNIPPET_START       => '[[',
-        self::T_CACHED_SNIPPET_END         => ']]',
-        self::T_UNCACHED_SNIPPET_START     => '[!',
-        self::T_UNCACHED_SNIPPET_END       => '!]',
-        self::T_DOCUMENT_PLACEHOLDER_START => '[*',
-        self::T_DOCUMENT_PLACEHOLDER_END   => '*]',
-        self::T_PLACEHOLDER_START          => '[+',
-        self::T_PLACEHOLDER_END            => '+]',
-        self::T_SETTING_START              => '[(',
-        self::T_SETTING_END                => ')]',
-        self::T_CHUNK_START                => '{{',
-        self::T_CHUNK_END                  => '}}',
-        self::T_QUESTION                   => '?',
-        self::T_AMPERSAND                  => '&',
-        self::T_BINDING                    => '@',
-        self::T_QUOTE                      => '`',
-        self::T_EQUAL                      => '=',
-        self::T_WHITESPACE                 => 'space',
-        self::T_STRING                     => 'word',
-        self::T_ANYTHING                   => 'any',
+        self::T_CACHED_SNIPPET_START   => '[[',
+        self::T_CACHED_SNIPPET_END     => ']]',
+        self::T_UNCACHED_SNIPPET_START => '[!',
+        self::T_UNCACHED_SNIPPET_END   => '!]',
+        self::T_DOCUMENT_FIELD_START   => '[*',
+        self::T_DOCUMENT_FIELD_END     => '*]',
+        self::T_PLACEHOLDER_START      => '[+',
+        self::T_PLACEHOLDER_END        => '+]',
+        self::T_SETTING_START          => '[(',
+        self::T_SETTING_END            => ')]',
+        self::T_CHUNK_START            => '{{',
+        self::T_CHUNK_END              => '}}',
+        self::T_QUESTION               => '?',
+        self::T_AMPERSAND              => '&',
+        self::T_BINDING                => '@',
+        self::T_QUOTE                  => '`',
+        self::T_EQUAL                  => '=',
+        self::T_WHITESPACE             => 'space',
+        self::T_STRING                 => 'word',
+        self::T_ANYTHING               => 'any',
     ];
 
     /**
      * Relation of opening and closing braces
      */
     private $brackets = [
-        self::T_CACHED_SNIPPET_START       => self::T_CACHED_SNIPPET_END,
-        self::T_UNCACHED_SNIPPET_START     => self::T_UNCACHED_SNIPPET_END,
-        self::T_CHUNK_START                => self::T_CHUNK_END,
-        self::T_DOCUMENT_PLACEHOLDER_START => self::T_DOCUMENT_PLACEHOLDER_END,
-        self::T_PLACEHOLDER_START          => self::T_PLACEHOLDER_END,
-        self::T_SETTING_START              => self::T_SETTING_END,
+        self::T_CACHED_SNIPPET_START   => self::T_CACHED_SNIPPET_END,
+        self::T_UNCACHED_SNIPPET_START => self::T_UNCACHED_SNIPPET_END,
+        self::T_CHUNK_START            => self::T_CHUNK_END,
+        self::T_DOCUMENT_FIELD_START   => self::T_DOCUMENT_FIELD_END,
+        self::T_PLACEHOLDER_START      => self::T_PLACEHOLDER_END,
+        self::T_SETTING_START          => self::T_SETTING_END,
     ];
 
     /**
@@ -73,20 +73,20 @@ class Translator {
      */
     private $instructions = [
         'inline' => [
-            self::T_CACHED_SNIPPET_START       => '[[%s]]',
-            self::T_UNCACHED_SNIPPET_START     => '[!%s!]',
-            self::T_CHUNK_START                => '{{%s}}',
-            self::T_DOCUMENT_PLACEHOLDER_START => '[*%s*]',
-            self::T_PLACEHOLDER_START          => '[+%s+]',
-            self::T_SETTING_START              => '[(%s)]',
+            self::T_CACHED_SNIPPET_START   => '[[%s]]',
+            self::T_UNCACHED_SNIPPET_START => '[!%s!]',
+            self::T_CHUNK_START            => '{{%s}}',
+            self::T_DOCUMENT_FIELD_START   => '[*%s*]',
+            self::T_PLACEHOLDER_START      => '[+%s+]',
+            self::T_SETTING_START          => '[(%s)]',
         ],
         'translated' => [
-            self::T_CACHED_SNIPPET_START       => '$this->call(self::SNIPPET, %s, true)',
-            self::T_UNCACHED_SNIPPET_START     => '$this->call(self::SNIPPET, %s, false)',
-            self::T_CHUNK_START                => '$this->call(self::CHUNK, %s)',
-            self::T_DOCUMENT_PLACEHOLDER_START => '$this->call(self::PLACEHOLDER, %s)',
-            self::T_PLACEHOLDER_START          => '$this->call(self::DOCFIELD, %s)',
-            self::T_SETTING_START              => '$this->call(self::SETTING, %s)',
+            self::T_CACHED_SNIPPET_START   => '$this->call(self::SNIPPET, %s, true)',
+            self::T_UNCACHED_SNIPPET_START => '$this->call(self::SNIPPET, %s, false)',
+            self::T_CHUNK_START            => '$this->call(self::CHUNK, %s)',
+            self::T_DOCUMENT_FIELD_START   => '$this->call(self::DOCFIELD, %s)',
+            self::T_PLACEHOLDER_START      => '$this->call(self::PLACEHOLDER, %s)',
+            self::T_SETTING_START          => '$this->call(self::SETTING, %s)',
         ],
     ];
 
@@ -114,26 +114,26 @@ class Translator {
 
     public function __construct() {
         $this->tokenizer = new Tokenizer([
-            self::T_CACHED_SNIPPET_START       => '\[\[',
-            self::T_CACHED_SNIPPET_END         => '\]\]',
-            self::T_UNCACHED_SNIPPET_START     => '\[\!',
-            self::T_UNCACHED_SNIPPET_END       => '\!\]',
-            self::T_DOCUMENT_PLACEHOLDER_START => '\[\*',
-            self::T_DOCUMENT_PLACEHOLDER_END   => '\*\]',
-            self::T_PLACEHOLDER_START          => '\[\+',
-            self::T_PLACEHOLDER_END            => '\+\]',
-            self::T_SETTING_START              => '\[\(',
-            self::T_SETTING_END                => '\)\]',
-            self::T_CHUNK_START                => '\{\{',
-            self::T_CHUNK_END                  => '\}\}',
-            self::T_QUESTION                   => '\?',
-            self::T_AMPERSAND                  => '\&',
-            self::T_BINDING                    => '@',
-            self::T_QUOTE                      => '`',
-            self::T_EQUAL                      => '=',
-            self::T_WHITESPACE                 => '[\\s\\n\\r]+',
-            self::T_STRING                     => '\\w+',
-            self::T_ANYTHING                   => '.',
+            self::T_CACHED_SNIPPET_START   => '\[\[',
+            self::T_CACHED_SNIPPET_END     => '\]\]',
+            self::T_UNCACHED_SNIPPET_START => '\[\!',
+            self::T_UNCACHED_SNIPPET_END   => '\!\]',
+            self::T_DOCUMENT_FIELD_START   => '\[\*',
+            self::T_DOCUMENT_FIELD_END     => '\*\]',
+            self::T_PLACEHOLDER_START      => '\[\+',
+            self::T_PLACEHOLDER_END        => '\+\]',
+            self::T_SETTING_START          => '\[\(',
+            self::T_SETTING_END            => '\)\]',
+            self::T_CHUNK_START            => '\{\{',
+            self::T_CHUNK_END              => '\}\}',
+            self::T_QUESTION               => '\?',
+            self::T_AMPERSAND              => '\&',
+            self::T_BINDING                => '@',
+            self::T_QUOTE                  => '`',
+            self::T_EQUAL                  => '=',
+            self::T_WHITESPACE             => '[\\s\\n\\r]+',
+            self::T_STRING                 => '\\w+',
+            self::T_ANYTHING               => '.',
         ]);
     }
 
@@ -181,7 +181,7 @@ class Translator {
                 }
 
                 case self::T_PLACEHOLDER_START:
-                case self::T_DOCUMENT_PLACEHOLDER_START: {
+                case self::T_DOCUMENT_FIELD_START: {
                     $value = $this->parseVariable($token[Tokenizer::TYPE], $this->brackets[ $token[Tokenizer::TYPE] ]);
                     break;
                 }
@@ -197,7 +197,7 @@ class Translator {
                     $value = $token[Tokenizer::VALUE] . $this->iterator->joinUntil(
                         self::T_CACHED_SNIPPET_START, 
                         self::T_UNCACHED_SNIPPET_START, 
-                        self::T_DOCUMENT_PLACEHOLDER_START, 
+                        self::T_DOCUMENT_FIELD_START, 
                         self::T_PLACEHOLDER_START,
                         self::T_SETTING_START,
                         self::T_CHUNK_START,

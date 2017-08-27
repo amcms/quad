@@ -16,6 +16,8 @@ class Quad {
 
     private $modifiers = [];
 
+    private $values = [];
+
     public function __construct($options) {
         $this->translator = new Translator;
 
@@ -32,8 +34,36 @@ class Quad {
         return isset($this->options[$option]) ? $this->options[$option] : null;
     }
 
-    public function render($filename) {
-        $hash  = hash('sha256', $filename) . '.php';
+    public function loadTemplateContents($template) {
+        if (strpos($template, '@') === 0) {
+            $binding = trim(substr($template, 1, strpos($template, ' ') - 1), ': ');
+
+            switch ($binding) {
+                case 'CODE': {
+                    $template = substr($template, 7);
+                    break;
+                }
+
+                default: {
+                    throw new \Exception("Unknown binding '" . $binding . "'", 1);
+                }
+            }
+        } else {
+            $filename = $this->getOption('templates') . '/' . $template;
+            $template = @file_get_contents($filename);
+
+            if ($template === false) {
+                throw new \Exception("Cannot read template '" . $filename . "'", 1);
+            }
+        }
+
+        return $template;
+    }
+
+    public function render($template, $values = []) {
+        $template = $this->loadTemplateContents($template);
+
+        $hash  = hash('sha256', $template) . '.php';
         $parts = [substr($hash, 0, 1), substr($hash, 1, 1)];
         $path  = $this->getOption('cache');
 
@@ -47,22 +77,15 @@ class Quad {
             }
         }
 
-        $compiled = $path . $hash;
+        $compiled = $path . '/' . $hash;
 
         if (file_exists($compiled)) {
             if (!is_readable($compiled)) {
                 throw new \Exception("Compiled template '" . $compiled . "' for template '" . $filename . "' exists but not readable", 1);
             }
 
-            return $this->renderCompiled($compiled);
+            return $this->renderCompiled($compiled, $values);
         } else {
-            $filename = $this->getOption('templates') . '/' . $filename;
-            $template = @file_get_contents($filename);
-
-            if ($template === false) {
-                throw new \Exception("Cannot read template '" . $filename . "'", 1);
-            }
-
             $output = $this->translator->parse($template);
 
             if (@file_put_contents($compiled, $output) === false) {
@@ -70,11 +93,15 @@ class Quad {
             }
         }
 
-        return $this->renderCompiled($compiled);
+        return $this->renderCompiled($compiled, $values);
     }
 
-    public function renderCompiled($filename) {
-        return include($filename);
+    public function renderCompiled($filename, $values) {
+        $this->values[] = $values;
+        $output = include($filename);
+        array_pop($this->values);
+
+        return $output;
     }
 
     /**
@@ -84,7 +111,7 @@ class Quad {
      */
     public function call(...$args) {
         if (!isset($args[0])) {
-            throw new \Exception("Type of instruction undefined", 1);
+            throw new \Exception("Type of instruction is undefined", 1);
         }
 
         if (!isset($this->functions[ $args[0] ])) {
@@ -107,11 +134,22 @@ class Quad {
             }
 
             case self::SETTING:
-            case self::DOCFIELD:
+            case self::DOCFIELD: {
+                return call_user_func($func, $args[1]);
+            }
+
             case self::PLACEHOLDER: {
+                $values = end($this->values);
+
+                if (isset($values[ $args[1] ])) {
+                    return $values[ $args[1] ];
+                }
+
                 return call_user_func($func, $args[1]);
             }
         }
+
+        throw new \Exception("Unknown type of instruction", 1);
     }
 
     public function clearCache() {
