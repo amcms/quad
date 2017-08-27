@@ -1,0 +1,16 @@
+{
+    "name": "amcms/quad",
+    "type": "library",
+    "description": "Amcms Template Engine",
+    "autoload": {
+        "psr-4": {
+            "Amcms\\Quad\\": "src/Quad"
+        }
+    },
+    "require": {
+        "nette/tokenizer": "^2.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": ">=5.4.3"
+    }
+}
