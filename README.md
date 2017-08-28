@@ -23,11 +23,11 @@ return $parser->render('main.tpl');
 ```
 
 or just
-```
+```php
 return $parser->render('@CODE: <h3>[+pagetitle+]</h3>', ['pagetitle' => 'test']);
 ```
 
-### main.tpl:
+### Sample template
 ```html
 {{header}}
 <h1 class="page-title">
