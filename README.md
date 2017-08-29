@@ -18,11 +18,16 @@ $parser->registerFunction(Quad::DOCFIELD, function($name) {...});
 $parser->registerFunction(Quad::PLACEHOLDER, function($name) {...});
 $parser->registerFunction(Quad::SETTING, function($name) {...});
 
-$code = $parser->render('main.tpl');
+return $parser->render('main.tpl');
 
 ```
 
-### And then in main.tpl:
+or just
+```php
+return $parser->render('@CODE: <h3>[+pagetitle+]</h3>', ['pagetitle' => 'test']);
+```
+
+### Sample template
 ```html
 {{header}}
 <h1 class="page-title">
