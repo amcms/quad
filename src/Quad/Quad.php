@@ -9,6 +9,7 @@ class Quad {
     const PLACEHOLDER = 3;
     const DOCFIELD    = 4;
     const SETTING     = 5;
+    const MAKEURL     = 5;
 
     private $translator;
 

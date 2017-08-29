@@ -26,6 +26,8 @@ class Translator {
     const T_SETTING_END            = 18;
     const T_CHUNK_START            = 19;
     const T_CHUNK_END              = 20;
+    const T_URL_START              = 21;
+    const T_URL_END                = 22;
     const T_WHITESPACE             = 1000;
     const T_STRING                 = 1001;
     const T_ANYTHING               = 2000;
@@ -46,6 +48,8 @@ class Translator {
         self::T_SETTING_END            => ')]',
         self::T_CHUNK_START            => '{{',
         self::T_CHUNK_END              => '}}',
+        self::T_URL_START              => '[~',
+        self::T_URL_END                => '~]',
         self::T_QUESTION               => '?',
         self::T_AMPERSAND              => '&',
         self::T_BINDING                => '@',
@@ -66,6 +70,7 @@ class Translator {
         self::T_DOCUMENT_FIELD_START   => self::T_DOCUMENT_FIELD_END,
         self::T_PLACEHOLDER_START      => self::T_PLACEHOLDER_END,
         self::T_SETTING_START          => self::T_SETTING_END,
+        self::T_URL_START              => self::T_URL_END,
     ];
 
     /**
@@ -79,6 +84,7 @@ class Translator {
             self::T_DOCUMENT_FIELD_START   => '[*%s*]',
             self::T_PLACEHOLDER_START      => '[+%s+]',
             self::T_SETTING_START          => '[(%s)]',
+            self::T_URL_START              => '[~%s~]',
         ],
         'translated' => [
             self::T_CACHED_SNIPPET_START   => '$this->call(self::SNIPPET, %s, true)',
@@ -87,6 +93,7 @@ class Translator {
             self::T_DOCUMENT_FIELD_START   => '$this->call(self::DOCFIELD, %s)',
             self::T_PLACEHOLDER_START      => '$this->call(self::PLACEHOLDER, %s)',
             self::T_SETTING_START          => '$this->call(self::SETTING, %s)',
+            self::T_URL_START              => '$this->call(self::MAKEURL, %s)',
         ],
     ];
 
@@ -126,6 +133,8 @@ class Translator {
             self::T_SETTING_END            => '\)\]',
             self::T_CHUNK_START            => '\{\{',
             self::T_CHUNK_END              => '\}\}',
+            self::T_URL_START              => '\[\~',
+            self::T_URL_END                => '\~\]',
             self::T_QUESTION               => '\?',
             self::T_AMPERSAND              => '\&',
             self::T_BINDING                => '@',
@@ -170,6 +179,11 @@ class Translator {
         $this->level++;
 
         while ($this->iterator->isNext()) {
+            if ($this->level > 1 && $this->iterator->isNext(self::T_URL_END)) {
+                $this->level--;
+                return implode($this->inline ? '' : ' . ', $result);
+            }
+
             $token = $this->iterator->nextToken();
 
             switch ($token[Tokenizer::TYPE]) {
@@ -183,6 +197,12 @@ class Translator {
                 case self::T_PLACEHOLDER_START:
                 case self::T_DOCUMENT_FIELD_START: {
                     $value = $this->parseVariable($token[Tokenizer::TYPE], $this->brackets[ $token[Tokenizer::TYPE] ]);
+                    var_dump($value);
+                    break;
+                }
+
+                case self::T_URL_START: {
+                    $value = $this->parseMakeUrl();
                     break;
                 }
 
@@ -201,6 +221,7 @@ class Translator {
                         self::T_PLACEHOLDER_START,
                         self::T_SETTING_START,
                         self::T_CHUNK_START,
+                        self::T_URL_START,
                         self::T_QUOTE
                     );
 
@@ -220,6 +241,17 @@ class Translator {
         }
 
         return '<?php echo ' . implode(', ', $result) . '; ?>';
+    }
+
+    private function parseMakeUrl() {
+        $input = $this->parseString(true);var_dump($input);
+        $this->iterator->expect(self::T_URL_END);
+
+        if ($this->inline) {
+            return sprintf($this->instructions['inline'][self::T_URL_START], $input);
+        } else {
+            return sprintf($this->instructions['translated'][self::T_URL_START], $input);
+        }
     }
 
     private function parseVariable($openTag, $closeTag) {
