@@ -146,6 +146,12 @@ class Translator {
         ]);
     }
 
+    /**
+     * Start point, makes compiled template
+     * 
+     * @param  string $input Source template
+     * @return string
+     */
     public function parse($input) {
         $this->iterator = new TokenIterator($this->tokenizer->tokenize($input));
         $this->level = 0;
@@ -173,6 +179,12 @@ class Translator {
         }
     }
 
+    /**
+     * Parse all instructions on same level
+     * 
+     * @param  boolean $inside Is it inline template?
+     * @return string
+     */
     private function parseString($inside = false) {
         $result = [];
 
@@ -197,7 +209,6 @@ class Translator {
                 case self::T_PLACEHOLDER_START:
                 case self::T_DOCUMENT_FIELD_START: {
                     $value = $this->parseVariable($token[Tokenizer::TYPE], $this->brackets[ $token[Tokenizer::TYPE] ]);
-                    var_dump($value);
                     break;
                 }
 
@@ -243,8 +254,13 @@ class Translator {
         return '<?php echo ' . implode(', ', $result) . '; ?>';
     }
 
+    /**
+     * Make URL
+     * 
+     * @return string
+     */
     private function parseMakeUrl() {
-        $input = $this->parseString(true);var_dump($input);
+        $input = $this->parseString(true);
         $this->iterator->expect(self::T_URL_END);
 
         if ($this->inline) {
@@ -254,6 +270,13 @@ class Translator {
         }
     }
 
+    /**
+     * Get placeholder, document field or setting value
+     * 
+     * @param  int $openTag  Type of opening tag
+     * @param  int $closeTag Type of closing tag
+     * @return string
+     */
     private function parseVariable($openTag, $closeTag) {
         $name = $this->iterator->nextValue(self::T_STRING);
         $this->iterator->expect($closeTag);
@@ -265,6 +288,11 @@ class Translator {
         }
     }
 
+    /**
+     * Parse one parameter of snippet, chunk
+     * 
+     * @return string
+     */
     private function parseSnippetParameter() {
         $this->iterator->expect(self::T_AMPERSAND);
         $name = $this->iterator->nextValue(self::T_STRING);
@@ -300,6 +328,13 @@ class Translator {
         }
     }
 
+    /**
+     * Parse snippet, chunk
+     * 
+     * @param  int $openTag  Type of opening tag
+     * @param  int $closeTag Type of closing tag
+     * @return string
+     */
     private function parseSnippet($openTag, $closeTag) {
         $result = [
             'name'   => $this->iterator->joinUntil(self::T_QUESTION, self::T_WHITESPACE, self::T_AMPERSAND, $closeTag),
@@ -326,6 +361,12 @@ class Translator {
         }
     }
 
+    /**
+     * Escapes string
+     * 
+     * @param  string $string Input
+     * @return string
+     */
     private function escape($string) {
         return str_replace('"', '\\"', $string);
     }
