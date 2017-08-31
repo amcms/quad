@@ -7,35 +7,19 @@ It's a template engine, based on MODX syntax
 ```php
 use Amcms\Quad\Quad;
 
-$parser = new Quad([
+class Api implements Amcms\Quad\Api {
+    ...
+}
+
+$api = new Api;
+
+$parser = new Quad($api, [
     'cache'     => __DIR__ . '/cache',
     'templates' => __DIR__ . '/templates',
 ]);
-
-$parser->registerFunction(Quad::SNIPPET, function($name, $params, $cached) {...});
-$parser->registerFunction(Quad::CHUNK, function($name, $params) {...});
-$parser->registerFunction(Quad::DOCFIELD, function($name) {...});
-$parser->registerFunction(Quad::PLACEHOLDER, function($name) {...});
-$parser->registerFunction(Quad::SETTING, function($name) {...});
-
-return $parser->render('main.tpl');
-
 ```
-
-or just
+then:
 ```php
+return $parser->render('main.tpl');
 return $parser->render('@CODE: <h3>[+pagetitle+]</h3>', ['pagetitle' => 'test']);
-```
-
-### Sample template
-```html
-{{header}}
-<h1 class="page-title">
-    [*pagetitle*]
-</h1>
-<img src="[[phpthumb? &input=`[*image*]` &options=`w=330,h=420,zc=1,f=jpg`]]" alt="" class="img-fluid">
-<div class="user-content">
-    [*content*]
-</div>
-{{footer}}
 ```
