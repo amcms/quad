@@ -4,13 +4,6 @@ namespace Amcms\Quad;
 
 class Quad {
 
-    const SNIPPET     = 1;
-    const CHUNK       = 2;
-    const PLACEHOLDER = 3;
-    const DOCFIELD    = 4;
-    const SETTING     = 5;
-    const MAKEURL     = 5;
-
     private $translator;
 
     private $functions = [];
@@ -19,8 +12,10 @@ class Quad {
 
     private $values = [];
 
-    public function __construct($options) {
+    public function __construct($api, $options) {
         $this->translator = new Translator;
+        $this->api = $api;
+        $this->api->setParser($this);
 
         foreach ($options as $option => $value) {
             $this->setOption($option, $value);
@@ -99,6 +94,7 @@ class Quad {
 
     public function renderCompiled($filename, $values) {
         $this->values[] = $values;
+        $api = $this->api;
         $output = include($filename);
         array_pop($this->values);
 
@@ -140,13 +136,17 @@ class Quad {
             }
 
             case self::PLACEHOLDER: {
-                $values = end($this->values);
+                $value = call_user_func($func, $args[1]);
 
-                if (isset($values[ $args[1] ])) {
-                    return $values[ $args[1] ];
+                if ($value === null) {
+                    for ($i = count($this->values) - 1; $i >= 0; $i++) {
+                        if (isset($this->values[$i][ $args[1] ])) {
+                            return $this->values[$i][ $args[1] ];
+                        }
+                    }
                 }
 
-                return call_user_func($func, $args[1]);
+                return $value;
             }
         }
 
