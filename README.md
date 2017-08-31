@@ -1,8 +1,8 @@
 # Quad
 
-It's a template engine, based on MODX syntax
+It's a template engine, based on MODX syntax, with precompilation in php code
 
-### Sample initialization
+Sample initialization:
 
 ```php
 use Amcms\Quad\Quad;
@@ -20,6 +20,6 @@ $parser = new Quad($api, [
 ```
 then:
 ```php
-return $parser->render('main.tpl');
-return $parser->render('@CODE: <h3>[+pagetitle+]</h3>', ['pagetitle' => 'test']);
+$parser->render('main.tpl');
+$parser->render('@CODE: <h3>[+pagetitle+]</h3>', ['pagetitle' => 'test']);
 ```
