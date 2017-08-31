@@ -12,10 +12,10 @@ class Quad {
 
     private $values = [];
 
-    public function __construct($api, $options) {
+    private $placeholders = [];
+
+    public function __construct($options) {
         $this->translator = new Translator;
-        $this->api = $api;
-        $this->api->setParser($this);
 
         foreach ($options as $option => $value) {
             $this->setOption($option, $value);
@@ -30,7 +30,14 @@ class Quad {
         return isset($this->options[$option]) ? $this->options[$option] : null;
     }
 
-    public function loadTemplateContents($template) {
+    /**
+     * Loads template contents, if $template is filename,
+     * or removes binding if it present
+     * 
+     * @param  string $template Template name/content
+     * @return string
+     */
+    public function loadTemplate($template) {
         if (strpos($template, '@') === 0) {
             $binding = trim(substr($template, 1, strpos($template, ' ') - 1), ': ');
 
@@ -56,101 +63,77 @@ class Quad {
         return $template;
     }
 
-    public function render($template, $values = []) {
-        $template = $this->loadTemplateContents($template);
-
+    /**
+     * Compiles template and/or returns filename of compiled php file
+     * 
+     * @param  string $template Template content
+     * @return string
+     */
+    private function compile($template) {
         $hash  = hash('sha256', $template) . '.php';
         $parts = [substr($hash, 0, 1), substr($hash, 1, 1)];
-        $path  = $this->getOption('cache');
+        $cache = $this->getOption('cache');
+        $file  = $cache . '/' . implode('/', $parts) . '/' . $hash;
 
-        foreach ($parts as $part) {
-            $path .= '/' . $part;
+        if (!file_exists($file)) {
+            $path = $cache;
 
-            if (!file_exists($path)) {
-                if (@mkdir($path, 0700) === false ) {
-                    throw new \Exception("Cannot create directory '" . $path . "'", 1);
+            foreach ($parts as $part) {
+                $path .= '/' . $part;
+
+                if (!file_exists($path)) {
+                    if (@mkdir($path, 0700) === false ) {
+                        throw new \Exception("Cannot create directory '" . $path . "'", 1);
+                    }
                 }
             }
-        }
 
-        $compiled = $path . '/' . $hash;
-
-        if (file_exists($compiled)) {
-            if (!is_readable($compiled)) {
-                throw new \Exception("Compiled template '" . $compiled . "' for template '" . $filename . "' exists but not readable", 1);
-            }
-
-            return $this->renderCompiled($compiled, $values);
-        } else {
             $output = $this->translator->parse($template);
 
-            if (@file_put_contents($compiled, $output) === false) {
-                throw new \Exception("Cannot save compiled template '" . $compiled . "'", 1);
+            if (@file_put_contents($file, $output) === false) {
+                throw new \Exception("Cannot save compiled template '" . $file . "'", 1);
             }
+        } elseif (!is_readable($file)) {
+            throw new \Exception("Compiled template '" . $file . "' exists but not readable", 1);
         }
 
-        return $this->renderCompiled($compiled, $values);
+        return $file;
     }
 
-    public function renderCompiled($filename, $values) {
+    /**
+     * @param  string $filename Full filename of compiled template
+     * @param  array  $values   Array of values
+     * @return string
+     */
+    public function renderCompiledTemplate($filename, $values = []) {
         $this->values[] = $values;
-        $api = $this->api;
-        $output = include($filename);
+        $api = $this;
+
+        ob_start();
+        include($filename);
+        $output = ob_get_contents();
+        ob_end_clean();
+
         array_pop($this->values);
 
         return $output;
     }
 
+    public function renderTemplate($name, $params = []) {
+        $content  = $this->loadTemplate($name);
+        $compiled = $this->compile($content);
+        return $this->renderCompiledTemplate($compiled, $params);
+    }
+
     /**
-     * Calls registered function
-     * @param  $args
-     * @return mixed
+     * Render chunk
+     * 
+     * @param  string $name
+     * @param  array  $params
+     * @return string
      */
-    public function call(...$args) {
-        if (!isset($args[0])) {
-            throw new \Exception("Type of instruction is undefined", 1);
-        }
-
-        if (!isset($this->functions[ $args[0] ])) {
-            throw new \Exception("Function for type " . $args[0] . " is not defined", 1);
-        }
-
-        $func = $this->functions[ $args[0] ];
-
-        switch ($args[0]) {
-            case self::SNIPPET: {
-                if (count($args) == 4) {
-                    return call_user_func($func, $args[1], $args[2], $args[3]);
-                } else {
-                    return call_user_func($func, $args[1], [], $args[2]);
-                }
-            }
-
-            case self::CHUNK: {
-                return call_user_func($func, $args[1], isset($args[1]) ? $args[1] : []);
-            }
-
-            case self::SETTING:
-            case self::DOCFIELD: {
-                return call_user_func($func, $args[1]);
-            }
-
-            case self::PLACEHOLDER: {
-                $value = call_user_func($func, $args[1]);
-
-                if ($value === null) {
-                    for ($i = count($this->values) - 1; $i >= 0; $i++) {
-                        if (isset($this->values[$i][ $args[1] ])) {
-                            return $this->values[$i][ $args[1] ];
-                        }
-                    }
-                }
-
-                return $value;
-            }
-        }
-
-        throw new \Exception("Unknown type of instruction", 1);
+    public function parseChunk($name, $params = []) {
+        return $this->renderTemplate('partials/' . $name . '.tpl', $params);
     }
 
     public function clearCache() {
@@ -158,34 +141,76 @@ class Quad {
     }
 
     /**
-     * Register function for call from template
-     * You MUST register all types of functions for correct parser work
-     * @example
-     * $quad->registerFunction(\Amcms\Quad\Quad::SNIPPET, function($name, $cached, $parameters) {...});
-     * @param  uint $type Type of function (SNIPPET, CHUNK, etc)
-     * @param  callable $function
-     * @return bool
+     * Runs snippet
+     * 
+     * @param  string  $name
+     * @param  array   $params
+     * @param  boolean $cached
+     * @return mixed
      */
-    public function registerFunction($type, $function) {
-        if (isset($this->functions[$type])) {
-            throw new \Exception("Function for type " . $type . " already registered", 1);
-        }
-
-        $this->functions[$type] = $function;
+    public function runSnippet($name, $params = [], $cached = true) {
+        return $name;
     }
 
     /**
-     * Register variable modifier (filter)
-     * @example 
-     * $quad->registerModifier('ellipsis', function($value, $parameters) {...});
-     * and then in template:
-     * [+value:ellipsis=`10`+]
-     * @param  string $name Name of the modifier
-     * @param  callable $function
-     * @return bool
+     * @param string $name
+     * @param string $value
      */
-    public function registerModifier($name, $function) {
+    public function setPlaceholder($name, $value) {
+        $this->placeholders[$name] = $value;
+    }
 
+    /**
+     * If placeholder not exists, method should return null
+     * 
+     * @param  string $name
+     * @return mixed|null
+     */
+    public function getPlaceholder($name) {
+        if (array_key_exists($name, $this->placeholders)) {
+            return $this->placeholders[$name];
+        }
+
+        for ($i = count($this->values) - 1; $i >= 0; $i++) {
+            if (isset($this->values[$i][$name])) {
+                return $this->values[$i][$name];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  string $name Document field name
+     * @return string
+     */
+    public function getField($name) {
+        return $name;
+    }
+
+    /**
+     * @param  string $name Option name
+     * @return string
+     */
+    public function getConfig($name) {
+        return $name;
+    }
+
+    /**
+     * @param  integer $id Identificator of the document
+     * @return string
+     */
+    public function makeUrl($id) {
+        return $id;
+    }
+
+    /**
+     * @param  string $input   Input value
+     * @param  array  $filters Array of pairs filter_name => filter_value
+     * @return string
+     */
+    public function applyFilters($input, $filters = []) {
+        return $input;
     }
 
 }
