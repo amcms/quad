@@ -17,8 +17,12 @@ class Translator {
     const T_QUESTION           = 17;    const T_AMPERSAND        = 18;
     const T_QUOTE              = 19;    const T_EQUAL            = 20;
     const T_BINDING            = 21;    const T_COMMA            = 22;
+    const T_COLON              = 23;    const T_NEGATION         = 24;
     const T_WHITESPACE         = 1000;  const T_STRING           = 1001;
     const T_ANYTHING           = 2000;
+
+    const MODE_PHP  = 1;
+    const MODE_MODX = 2;
 
     /**
      * Token symbols, used for error message only
@@ -35,6 +39,7 @@ class Translator {
         self::T_BINDING           => '@',      self::T_QUOTE           => '`',
         self::T_EQUAL             => '=',      self::T_WHITESPACE      => 'space',
         self::T_STRING            => 'word',   self::T_ANYTHING        => 'any',
+        self::T_COLON             => ':',      self::T_NEGATION        => '!',
     ];
 
     /**
@@ -54,7 +59,7 @@ class Translator {
      * Translation instructions
      */
     private $instructions = [
-        'inline' => [
+        self::MODE_MODX => [
             self::T_SNIPPET_START     => '[[%s]]',
             self::T_NC_SNIPPET_START  => '[!%s!]',
             self::T_CHUNK_START       => '{{%s}}',
@@ -62,15 +67,21 @@ class Translator {
             self::T_PLACEHOLDER_START => '[+%s+]',
             self::T_CONFIG_START      => '[(%s)]',
             self::T_LINK_START        => '[~%s~]',
+            'params_start'            => '? ',
+            'params_delimiter'        => ' ',
+            'params_end'              => '',
         ],
-        'translated' => [
-            self::T_SNIPPET_START     => '$api->runSnippet(%s, true)',
+        self::MODE_PHP => [
+            self::T_SNIPPET_START     => '$api->runSnippet(%s)',
             self::T_NC_SNIPPET_START  => '$api->runSnippet(%s, false)',
             self::T_CHUNK_START       => '$api->parseChunk(%s)',
             self::T_FIELD_START       => '$api->getField(%s)',
             self::T_PLACEHOLDER_START => '$api->getPlaceholder(%s)',
             self::T_CONFIG_START      => '$api->getConfig(%s)',
             self::T_LINK_START        => '$api->makeUrl(%s)',
+            'params_start'            => ', [',
+            'params_delimiter'        => ', ',
+            'params_end'              => ']',
         ],
     ];
 
@@ -85,10 +96,10 @@ class Translator {
     private $iterator;
 
     /**
-     * Is current token in inline template string?
-     * @var boolean
+     * Current translation mode, php or modx string
+     * @var integer
      */
-    private $inline = false;
+    private $mode = self::MODE_PHP;
 
     /**
      * Nesting level of instructions
@@ -107,8 +118,10 @@ class Translator {
             self::T_LINK_START        => '\[\~',  self::T_LINK_END        => '\~\]',
             self::T_QUESTION          => '\?',    self::T_AMPERSAND       => '\&',
             self::T_BINDING           => '@',     self::T_QUOTE           => '`',
-            self::T_EQUAL             => '=',     self::T_WHITESPACE      => '[\\s\\n\\r]+',
-            self::T_STRING            => '\\w+',  self::T_ANYTHING        => '.',
+            self::T_EQUAL             => '=',     self::T_COLON           => ':',
+            self::T_NEGATION          => '\!',
+            self::T_STRING            => '\\w+',  self::T_WHITESPACE      => '[\\s\\n\\r]+',
+            self::T_ANYTHING          => '.',
         ]);
     }
 
@@ -124,7 +137,7 @@ class Translator {
         $this->source = $input;
 
         try {
-            return $this->parseString();
+            return $this->parseString($inside = false);
         } catch (UnexpectedTokenException $e) {
             $tokens = $e->getExpectedTokens();
             $tokens = array_reverse($tokens);
@@ -151,24 +164,19 @@ class Translator {
      * @param  boolean $inside Is it inline template?
      * @return string
      */
-    private function parseString($inside = false) {
+    private function parseString($inside = true, $endTag = []) {
         $result = [];
 
         $this->level++;
 
         while ($this->iterator->isNext()) {
-            if ($this->level > 1 && $this->iterator->isNext(
-                self::T_SNIPPET_END, 
-                self::T_NC_SNIPPET_END, 
-                self::T_FIELD_END, 
-                self::T_PLACEHOLDER_END,
-                self::T_CONFIG_END,
-                self::T_CHUNK_END, 
-                self::T_LINK_END, 
-                self::T_QUOTE
-            )) {
-                $this->level--;
-                return implode($this->inline ? '' : ' . ', $result);
+            if ($this->level > 1 ) {
+                foreach ($endTag as $tag) {
+                    if ($this->iterator->isNext($tag)) {
+                        $this->level--; var_dump($result);
+                        return implode($this->mode == self::MODE_MODX ? '' : ' . ', $result);
+                    }
+                }
             }
 
             $token = $this->iterator->nextToken();
@@ -201,10 +209,11 @@ class Translator {
                         self::T_CONFIG_START,      self::T_CONFIG_END,
                         self::T_CHUNK_START,       self::T_CHUNK_END, 
                         self::T_LINK_START,        self::T_LINK_END,
-                        self::T_QUOTE
+                        self::T_QUOTE,             self::T_COLON,
+                        self::T_QUESTION,          self::T_AMPERSAND
                     );
 
-                    if (!$this->inline) {
+                    if ($this->mode == self::MODE_PHP) {
                         $value = "'" . $this->escape($value) . "'";
                     }
                 }
@@ -228,9 +237,9 @@ class Translator {
      * @return string
      */
     private function parseMakeUrl() {
-        $input = $this->parseString(true);
+        $input = $this->parseString($inside = true, $endTag = [self::T_LINK_END]);
         $this->iterator->expect(self::T_LINK_END);
-        return sprintf($this->instructions[$this->inline ? 'inline' : 'translated'][self::T_LINK_START], $input);
+        return sprintf($this->instructions[$this->mode][self::T_LINK_START], $input);
     }
 
     /**
@@ -241,14 +250,40 @@ class Translator {
      * @return string
      */
     private function parseVariable($openTag, $closeTag) {
-        $name = $this->parseString(true);
+        $name = $this->parseString($inside = true, $endTag = [$closeTag]);
         $this->iterator->expect($closeTag);
 
-        if ($this->inline) {
-            return sprintf($this->instructions['inline'][$openTag], $name);
+        return sprintf($this->instructions[$this->mode][$openTag], $name);
+    }
+
+    private function parseFilter() {
+        $this->iterator->expect(self::T_COLON);
+        $name = $this->iterator->nextValue(self::T_NEGATION);
+        $name .= $this->iterator->expect(self::T_STRING);
+
+        if ($this->iterator->isNext(self::T_EQUAL)) {
+            $this->iterator->nextToken(self::T_EQUAL);
+            $this->iterator->expect(self::T_QUOTE);
+            $value = $this->parseString($inside = true, $endTag = [self::T_QUOTE]);
+            $this->iterator->expect(self::T_QUOTE);
         } else {
-            return sprintf($this->instructions['translated'][$openTag], $name);
+            $value = null;
         }
+
+        return compact('name', 'value');
+    }
+
+    private function parseFilters() {
+        $filters = [];
+
+        do {
+            if (!$this->iterator->isNext(self::T_COLON)) {
+                break;
+            } 
+            $filters[] = $this->parseFilter();
+        } while ($this->iterator->isNext());
+
+        return $filters;
     }
 
     /**
@@ -257,7 +292,6 @@ class Translator {
      * @return string
      */
     private function parseSnippetParameter() {
-        $this->iterator->expect(self::T_AMPERSAND);
         $name = $this->iterator->nextValue(self::T_STRING);
         $this->iterator->nextToken(self::T_WHITESPACE);
         $this->iterator->expect(self::T_EQUAL);
@@ -270,18 +304,18 @@ class Translator {
             $this->iterator->nextToken();
         } else {
             if ($this->iterator->isNext(self::T_BINDING)) {
-                $this->inline = true;
-                $value = "'" . $this->escape($this->parseString()) . "'";
-                $this->inline = false;
+                $this->mode = self::MODE_MODX;
+                $value = "'" . $this->escape($this->parseString($inside = true, $endTag = [self::T_QUOTE])) . "'";
+                $this->mode = self::MODE_PHP;
             } else {
-                $value = $this->parseString();
+                $value = $this->parseString($inside = true, $endTag = [self::T_QUOTE]);
             }
         }
 
         $this->iterator->expect(self::T_QUOTE);
         $this->iterator->nextAll(self::T_WHITESPACE);
 
-        if ($this->inline) {
+        if ($this->mode == self::MODE_MODX) {
             return '&' . $this->escape($name) . '=`' . $value . '`';
         } else {
             if ($value == '') {
@@ -301,11 +335,15 @@ class Translator {
      */
     private function parseSnippet($openTag, $closeTag) {
         $result = [
-            'name'   => $this->iterator->joinUntil(self::T_QUESTION, self::T_WHITESPACE, self::T_AMPERSAND, $closeTag),
+            'name'   => $this->parseString($inside = true, $endTag = [$closeTag, self::T_QUESTION, self::T_WHITESPACE, self::T_AMPERSAND, self::T_COLON]),
             'type'   => $openTag,
             'cached' => $closeTag == self::T_SNIPPET_START,
             'params' => [],
         ];
+
+        if ($this->iterator->isNext(self::T_COLON)) {
+            $filters = $this->parseFilters();
+        }
 
         $this->iterator->nextAll(self::T_QUESTION, self::T_WHITESPACE);
 
@@ -313,16 +351,44 @@ class Translator {
             if ($this->iterator->isNext($closeTag)) {
                 break;
             } 
+
+            $this->iterator->expect(self::T_AMPERSAND, $closeTag);
+
             $result['params'][] = $this->parseSnippetParameter();
         } while ($this->iterator->isNext());
 
         $this->iterator->expect($closeTag);
 
-        if ($this->inline) {
-            return sprintf($this->instructions['inline'][ $result['type'] ], $result['name'] . (!empty($result['params']) ? '? ' . implode(' ', $result['params']) : '' ));
-        } else {
-            return sprintf($this->instructions['translated'][ $result['type'] ], "'" . $result['name'] . "'" . (!empty($result['params']) ? ', [' . implode(', ', $result['params']) . ']' : '' ));
+        $output = $result['name'];
+        
+        if (!empty($filters) && $this->mode == self::MODE_MODX) {
+            foreach ($filters as $filter) {
+                $output .= ':' . $filter['name'];
+
+                if ($filter['value'] !== null) {
+                    $output .= '=`' . $filter['value'] . '`';
+                }
+            }
         }
+
+        if (!empty($result['params']) ) {
+            $output .= $this->instructions[$this->mode]['params_start'] . implode($this->instructions[$this->mode]['params_delimiter'], $result['params'])
+                 . $this->instructions[$this->mode]['params_end'];
+        }
+
+        $output = sprintf($this->instructions[$this->mode][ $result['type'] ], $output);
+
+        if (!empty($filters) && $this->mode == self::MODE_PHP) {
+            $chain = [];
+
+            foreach ($filters as $filter) {
+                $chain[] = "'" . $filter['name'] . "' => " . ($filter['value'] !== null ? $filter['value'] : 'null');
+            }
+
+            $output = '$api->applyFilters(' . $output . ', [' . implode('], [', $chain) . '])';
+        }
+
+        return $output;
     }
 
     /**
