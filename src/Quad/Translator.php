@@ -173,7 +173,7 @@ class Translator {
             if ($this->level > 1 ) {
                 foreach ($endTag as $tag) {
                     if ($this->iterator->isNext($tag)) {
-                        $this->level--; var_dump($result);
+                        $this->level--;
                         return implode($this->mode == self::MODE_MODX ? '' : ' . ', $result);
                     }
                 }
@@ -250,10 +250,39 @@ class Translator {
      * @return string
      */
     private function parseVariable($openTag, $closeTag) {
-        $name = $this->parseString($inside = true, $endTag = [$closeTag]);
+        $name = $this->parseString($inside = true, $endTag = [$closeTag, self::T_COLON]);
+
+        if ($this->iterator->isNext(self::T_COLON)) {
+            $filters = $this->parseFilters();
+        }
+
         $this->iterator->expect($closeTag);
 
-        return sprintf($this->instructions[$this->mode][$openTag], $name);
+        $output = $name;
+
+        if (!empty($filters) && $this->mode == self::MODE_MODX) {
+            foreach ($filters as $filter) {
+                $output .= ':' . $filter['name'];
+
+                if ($filter['value'] !== null) {
+                    $output .= '=`' . $filter['value'] . '`';
+                }
+            }
+        }
+
+        $output = sprintf($this->instructions[$this->mode][$openTag], $output);
+
+        if (!empty($filters) && $this->mode == self::MODE_PHP) {
+            $chain = [];
+
+            foreach ($filters as $filter) {
+                $chain[] = "'" . $filter['name'] . "' => " . ($filter['value'] !== null ? $filter['value'] : 'null');
+            }
+
+            $output = '$api->applyFilters(' . $output . ', [[' . implode('], [', $chain) . ']])';
+        }
+
+        return $output;
     }
 
     private function parseFilter() {
@@ -385,7 +414,7 @@ class Translator {
                 $chain[] = "'" . $filter['name'] . "' => " . ($filter['value'] !== null ? $filter['value'] : 'null');
             }
 
-            $output = '$api->applyFilters(' . $output . ', [' . implode('], [', $chain) . '])';
+            $output = '$api->applyFilters(' . $output . ', [[' . implode('], [', $chain) . ']])';
         }
 
         return $output;

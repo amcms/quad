@@ -4,6 +4,9 @@
 
     interface Api {
 
+        /**
+         * @param \Amcms\Quad\Quad $parser
+         */
         public function setParser($parser);
 
         /**
@@ -25,10 +28,13 @@
          */
         public function parseChunk($name, $params = []);
 
+        /**
+         * @param string $name
+         * @param string $value
+         */
         public function setPlaceholder($name, $value);
 
         /**
-         * Returns placeholder value.
          * If placeholder not exists, method should return null
          * 
          * @param  string $name
@@ -36,13 +42,30 @@
          */
         public function getPlaceholder($name);
 
+        /**
+         * @param  string $name Document field name
+         * @return string
+         */
         public function getField($name);
 
+        /**
+         * @param  string $name Option name
+         * @return string
+         */
         public function getConfig($name);
 
+        /**
+         * @param  integer $id Identificator of the document
+         * @return string
+         */
         public function makeUrl($id);
 
-        public function applyFilter($input, $name, $value);
+        /**
+         * @param  string $input   Input value
+         * @param  array  $filters Array of pairs filter_name => filter_value
+         * @return string
+         */
+        public function applyFilters($input, $filters = []);
 
     }
 
