@@ -6,9 +6,9 @@ class Quad {
 
     private $translator;
 
-    private $functions = [];
+    private $snippets = [];
 
-    private $modifiers = [];
+    private $filters = [];
 
     private $values = [];
 
@@ -149,7 +149,14 @@ class Quad {
      * @return mixed
      */
     public function runSnippet($name, $params = [], $cached = true) {
-        return $name;
+        if (!array_key_exists($name, $this->snippets)) {
+            throw new \Exception("Snippet '$name' not registered!", 1);
+        }
+
+        $function = $this->snippets[$name];
+        $input = $function($input, $params);
+
+        return $input;
     }
 
     /**
@@ -210,7 +217,28 @@ class Quad {
      * @return string
      */
     public function applyFilters($input, $filters = []) {
+        foreach ($filters as $filter => $value) {
+            if (!array_key_exists($filter, $this->filters)) {
+                continue;
+            }
+
+            $function = $this->filters[$filter];
+            $input = $function($input, $value);
+
+            if ($input === null) {
+                break;
+            }
+        }
+
         return $input;
+    }
+
+    public function registerFilter($name, $function) {
+        $this->filters[$name] = $function;
+    }
+
+    public function registerSnippet($name, $function) {
+        $this->snippets[$name] = $function;
     }
 
 }
