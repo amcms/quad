@@ -189,7 +189,7 @@ class Quad {
             return $this->placeholders[$name];
         }
 
-        for ($i = count($this->values) - 1; $i >= 0; $i++) {
+        for ($i = count($this->values) - 1; $i >= 0; $i--) {
             if (isset($this->values[$i][$name])) {
                 return $this->values[$i][$name];
             }

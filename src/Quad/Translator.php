@@ -189,6 +189,7 @@ class Translator {
                     break;
                 }
 
+                case self::T_CONFIG_START:
                 case self::T_PLACEHOLDER_START:
                 case self::T_FIELD_START: {
                     $value = $this->parseVariable($token[Tokenizer::TYPE], $this->brackets[ $token[Tokenizer::TYPE] ]);
