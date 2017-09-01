@@ -70,9 +70,14 @@ class Quad {
      * @return string
      */
     private function compile($template) {
+        $cache = $this->getOption('cache');
+
+        if ($cache === false) {
+            return $this->translator->parse($template);
+        }
+
         $hash  = hash('sha256', $template) . '.php';
         $parts = [substr($hash, 0, 1), substr($hash, 1, 1)];
-        $cache = $this->getOption('cache');
         $file  = $cache . '/' . implode('/', $parts) . '/' . $hash;
 
         if (!file_exists($file)) {
@@ -110,7 +115,13 @@ class Quad {
         $api = $this;
 
         ob_start();
-        include($filename);
+
+        if ($this->getOption('cache') !== false) {
+            include($filename);
+        } else {
+            eval(preg_replace('/<\?php (.+) \?>/s', '$1', $filename));
+        }
+
         $output = ob_get_contents();
         ob_end_clean();
 
@@ -154,7 +165,7 @@ class Quad {
         }
 
         $function = $this->snippets[$name];
-        $input = $function($params);
+        $input = $function($params, $cached);
 
         return $input;
     }

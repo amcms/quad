@@ -400,10 +400,8 @@ class Translator {
             }
         }
 
-        if (!empty($result['params']) ) {
-            $output .= $this->instructions[$this->mode]['params_start'] . implode($this->instructions[$this->mode]['params_delimiter'], $result['params'])
+        $output .= $this->instructions[$this->mode]['params_start'] . implode($this->instructions[$this->mode]['params_delimiter'], $result['params'])
                  . $this->instructions[$this->mode]['params_end'];
-        }
 
         $output = sprintf($this->instructions[$this->mode][ $result['type'] ], $output);
 
