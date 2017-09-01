@@ -228,13 +228,13 @@ class Quad {
      * @return string
      */
     public function applyFilters($input, $filters = []) {
-        foreach ($filters as $filter => $parameter) {
-            if (!array_key_exists($filter, $this->filters)) {
+        foreach ($filters as $filter) {
+            if (!array_key_exists($filter[0], $this->filters)) {
                 continue;
             }
 
-            $function = $this->filters[$filter];
-            $input = $function($input, $parameter);
+            $function = $this->filters[ $filter[0] ];
+            $input = $function($input, $filter[1]);
 
             if ($input === null) {
                 break;

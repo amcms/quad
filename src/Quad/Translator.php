@@ -276,10 +276,10 @@ class Translator {
             $chain = [];
 
             foreach ($filters as $filter) {
-                $chain[] = "'" . $filter['name'] . "' => " . ($filter['value'] !== null ? $filter['value'] : 'null');
+                $chain[] = "'" . $filter['name'] . "', " . ($filter['value'] !== null ? $filter['value'] : 'null');
             }
 
-            $output = '$api->applyFilters(' . $output . ', [' . implode(', ', $chain) . '])';
+            $output = '$api->applyFilters(' . $output . ', [[' . implode('], [', $chain) . ']])';
         }
 
         return $output;
@@ -409,10 +409,10 @@ class Translator {
             $chain = [];
 
             foreach ($filters as $filter) {
-                $chain[] = "'" . $filter['name'] . "' => " . ($filter['value'] !== null ? $filter['value'] : 'null');
+                $chain[] = "'" . $filter['name'] . "', " . ($filter['value'] !== null ? $filter['value'] : 'null');
             }
 
-            $output = '$api->applyFilters(' . $output . ', [' . implode(', ', $chain) . '])';
+            $output = '$api->applyFilters(' . $output . ', [[' . implode('], [', $chain) . ']])';
         }
 
         return $output;
