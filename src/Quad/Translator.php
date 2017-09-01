@@ -279,7 +279,7 @@ class Translator {
                 $chain[] = "'" . $filter['name'] . "' => " . ($filter['value'] !== null ? $filter['value'] : 'null');
             }
 
-            $output = '$api->applyFilters(' . $output . ', [' . implode('], [', $chain) . '])';
+            $output = '$api->applyFilters(' . $output . ', [' . implode(', ', $chain) . '])';
         }
 
         return $output;
@@ -414,7 +414,7 @@ class Translator {
                 $chain[] = "'" . $filter['name'] . "' => " . ($filter['value'] !== null ? $filter['value'] : 'null');
             }
 
-            $output = '$api->applyFilters(' . $output . ', [' . implode('], [', $chain) . '])';
+            $output = '$api->applyFilters(' . $output . ', [' . implode(', ', $chain) . '])';
         }
 
         return $output;

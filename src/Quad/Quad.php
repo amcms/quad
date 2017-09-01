@@ -154,7 +154,7 @@ class Quad {
         }
 
         $function = $this->snippets[$name];
-        $input = $function($input, $params);
+        $input = $function($params);
 
         return $input;
     }
@@ -213,17 +213,17 @@ class Quad {
 
     /**
      * @param  string $input   Input value
-     * @param  array  $filters Array of pairs filter_name => filter_value
+     * @param  array  $filters Array of pairs filter_name => filter_parameter
      * @return string
      */
     public function applyFilters($input, $filters = []) {
-        foreach ($filters as $filter => $value) {
+        foreach ($filters as $filter => $parameter) {
             if (!array_key_exists($filter, $this->filters)) {
                 continue;
             }
 
             $function = $this->filters[$filter];
-            $input = $function($input, $value);
+            $input = $function($input, $parameter);
 
             if ($input === null) {
                 break;
