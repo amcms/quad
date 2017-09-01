@@ -53,14 +53,22 @@ class TranslatorTest extends TestCase {
 
         $this->parser->setPlaceholder('a', 1);
         $this->parser->setPlaceholder('b', 2);
+        $this->parser->setPlaceholder('a1', 2);
     }
 
     public function providerParse() {
         return [
             ['@CODE: [[getCacheMode]]', 'cached'],
             ['@CODE: [!getCacheMode!]', 'uncached'],
-            ['@CODE: [[getParam? &parameter=`1` &what=`name`]]', 'parameter'],
-            ['@CODE: [[getParam? &parameter=`1` &what=`value`]]', '1'],
+            ['@CODE: [[getCacheMode? &p=`1`]]', 'cached'],
+            ['@CODE: [!getCacheMode? &p=`1`!]', 'uncached'],
+            ['@CODE: [[getParam? &p=`1` &what=`name`]]', 'p'],
+            ['@CODE: [[getParam? &p=`1` &what=`value`]]', 1],
+            ['@CODE: [[getParam:add=`[+a+]`? &p=`1` &what=`value`]]', 2],
+            ['@CODE: [[getParam:add=`[+a+]`:add=`[+b+]`? &p=`1` &what=`value`]]', 4],
+            ['@CODE: [+a[[getParam? &p=`1` &what=`value`]]+]', 2],
+            ['@CODE: [+a[[getParam? &p=`1` &what=`value`]]:add=`[[getParam? &p=`3` &what=`value`]]`+]', 5],
+            ['@CODE: [[getParam? &p=`[+a1:add=`[+b+]`+]` &what=`value`]]', 4],
             ['@CODE: [[sum? &a=`1` &b=`2`]]', 3],
             ['@CODE: [!sum? &a=`1` &b=`2` &c=`3`!]', 6],
             ['@CODE: [[sum? &a=`1` &b=`[+b+]`]]', 3],
@@ -68,6 +76,9 @@ class TranslatorTest extends TestCase {
             ['@CODE: [+a+] + [+b+]', '1 + 2'],
             ['@CODE: [+a:add=`3`+]', 4],
             ['@CODE: [+a:add=`[+b+]`+]', 3],
+            ['@CODE: [+a:add=`[+b:add=`[+a+]`+]`+]', 4],
+            ['@CODE: [+a:add=`[+b:add=`[+a+]`+]`:add=`[+a+]`+]', 5],
+            ['@CODE: [+a:add=`[+b:add=`[+a+]`+]`:add=`[+a:add=`[[getParam:add=`[+a+]`? &p=`3` &what=`value`]]`+]`+]', 9],
         ];
     }
 
