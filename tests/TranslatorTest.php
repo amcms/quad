@@ -1,21 +1,9 @@
 <?php
 
-//require __DIR__ . '/../vendor/autoload.php';
-
 use PHPUnit\Framework\TestCase;
 
 class Parser extends \Amcms\Quad\Quad {
-    public function getField($name) {
-        return 'VALUE OF FIELD "' . $name . '"';
-    }
 
-    public function getConfig($name) {
-        return 'VALUE OF SETTING "' . $name . '"';
-    }
-
-    public function makeUrl($id) {
-        return 'LINK FOR "' . $id . '"';
-    }
 }
 
 
@@ -45,6 +33,11 @@ class TranslatorTest extends TestCase {
             return array_reduce($parameters, function($sum, $arg) {
                 return $sum + intval($arg);
             });
+        });
+
+        $this->parser->registerSnippet('setPlaceholder', function($parameters) {
+            $this->parser->setPlaceholder($parameters['name'], $parameters['value']);
+            return '';
         });
 
         $this->parser->registerFilter('add', function($input, $parameter) {
@@ -87,6 +80,16 @@ class TranslatorTest extends TestCase {
             ['@CODE: [+a:add=`[+b:add=`[+a+]`+]`+]', 4],
             ['@CODE: [+a:add=`[+b:add=`[+a+]`+]`:add=`[+a+]`+]', 5],
             ['@CODE: [+a:add=`[+b:add=`[+a+]`+]`:add=`[+a:add=`[[getParam:add=`[+a+]`? &p=`3` &what=`value`]]`+]`+]', 9],
+            ['@CODE: [!setPlaceholder? &name=`c` &value=`3`!][+c+]', 3],
+            ['@CODE: [(a)]', 'a'],
+            ['@CODE: [(a[+a+])]', 'a1'],
+            ['@CODE: [*a*]', 'a'],
+            ['@CODE: [*a[+a+]*]', 'a1'],
+            ['@CODE: [~[*a[+a+]*]~]', 'a1'],
+            ['@CODE: [~[*a[+a+]*]~]', 'a1'],
+            ['@CODE: [+a+][!setPlaceholder? &name=`a` &value=`3`!][+a+]', '13'],
+            ['@CODE: {{chunk1}}', '<h1>1</h1>'],
+            ['@CODE: {{chunk1? &c=`1`}}', '<h1>11</h1>'],
         ];
     }
 
@@ -94,11 +97,14 @@ class TranslatorTest extends TestCase {
      * @dataProvider providerParse
      */
     public function testParse($input, $result) {
-        echo "\n" . $input . "\n";
         $output = $this->parser->renderTemplate($input);
-        echo $output . "\n";
+        $this->assertEquals($result, $output);
+    }
 
-        $this->assertEquals($output, $result);
+    public function testSetPlaceholder() {
+        $this->parser->renderTemplate('@CODE: [!setPlaceholder? &name=`c` &value=`3`!]');
+        $output = $this->parser->renderTemplate('@CODE: [+c+]');
+        $this->assertEquals(3, $output);
     }
 
 }
