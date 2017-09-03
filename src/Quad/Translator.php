@@ -19,6 +19,7 @@ class Translator {
     const T_BINDING            = 21;    const T_COMMA            = 22;
     const T_COLON              = 23;    const T_NEGATION         = 24;
     const T_ROUND_OPEN         = 25;    const T_ROUND_CLOSE      = 26;
+    const T_DOT                = 27;
     const T_WHITESPACE         = 1000;  const T_STRING           = 1001;
     const T_ANYTHING           = 2000;
 
@@ -42,6 +43,7 @@ class Translator {
         self::T_STRING            => 'word',   self::T_ANYTHING        => 'any',
         self::T_COLON             => ':',      self::T_NEGATION        => '!',
         self::T_ROUND_OPEN        => '(',      self::T_ROUND_CLOSE     => ')',
+        self::T_DOT               => '.',
     ];
 
     /**
@@ -122,7 +124,7 @@ class Translator {
             self::T_QUESTION          => '\?',    self::T_AMPERSAND       => '\&',
             self::T_BINDING           => '@',     self::T_QUOTE           => '`',
             self::T_EQUAL             => '=',     self::T_COLON           => ':',
-            self::T_NEGATION          => '\!',
+            self::T_NEGATION          => '\!',    self::T_DOT             => '\.',
             self::T_STRING            => '\\w+',  self::T_WHITESPACE      => '[\\s\\n\\r]+',
             self::T_ANYTHING          => '.',
         ]);
@@ -216,7 +218,7 @@ class Translator {
                         self::T_ROUND_OPEN,        self::T_ROUND_CLOSE,
                         self::T_QUOTE,             self::T_COLON,
                         self::T_QUESTION,          self::T_AMPERSAND,
-                        self::T_BINDING
+                        self::T_BINDING,           self::T_DOT
                     );
 
                     if ($this->mode == self::MODE_PHP) {
@@ -256,8 +258,21 @@ class Translator {
      * @return string
      */
     private function parseVariable($openTag, $closeTag) {
-        $name = $this->parseString($inside = true, $endTag = [$closeTag, self::T_COLON, self::T_BINDING]);
+        $name = $this->parseString($inside = true, $endTag = [$closeTag, self::T_COLON, self::T_BINDING, self::T_DOT]);
 
+        // Parsing instruction [+key.key1.key2+]
+        // for nesting arrays
+        if ($this->iterator->isNext(self::T_DOT)) {
+            $name = [$name];
+
+            while ($this->iterator->isNext(self::T_DOT)) {
+                $this->iterator->nextToken();
+                $name[] = $this->parseString($inside = true, $endTag = [$closeTag, self::T_COLON, self::T_BINDING, self::T_DOT]);
+            }
+        }
+
+        // Parsing instruction [*field@binding(value)*]
+        // only for document fields
         if ($openTag == self::T_FIELD_START && $this->iterator->isNext(self::T_BINDING)) {
             $binding = [];
 
@@ -273,11 +288,20 @@ class Translator {
             }
         }
 
+        // Parsing instruction [+field:filter1:filter2=`val`+]
         if ($this->iterator->isNext(self::T_COLON)) {
             $filters = $this->parseFilters();
         }
 
         $this->iterator->expect($closeTag);
+
+        if (is_array($name)) {
+            if ($this->mode == self::MODE_PHP) {
+                $name = '[' . implode(', ', $name) . ']';
+            } else {
+                $name = implode('.', $name);
+            }
+        }
 
         $output = $name;
 

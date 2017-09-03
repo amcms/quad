@@ -38,17 +38,15 @@ class Quad {
      * @return string
      */
     public function loadTemplate($template) {
-        if (strpos($template, '@') === 0) {
-            $binding = trim(substr($template, 1, strpos($template, ' ') - 1), ': ');
-
-            switch ($binding) {
+        if (strpos($template, '@') === 0 && preg_match('/@(\w+)[:\s]{1}\s*(.+)$/s', $template, $matches)) {
+            switch ($matches[1]) {
                 case 'CODE': {
-                    $template = substr($template, 7);
+                    $template = $matches[2];
                     break;
                 }
 
                 default: {
-                    throw new \Exception("Unknown binding '" . $binding . "'", 1);
+                    throw new \Exception("Unknown binding '" . $matches[1] . "'", 1);
                 }
             }
         } else {
@@ -179,23 +177,48 @@ class Quad {
     }
 
     /**
+     * Returns value of key, that presents with $path
+     * 
+     * @param  array $source
+     * @param  array $path Array of keys for search in $source
+     * @return mixed|null
+     */
+    private function getArrayAttribute($source, $path) {
+        foreach ($path as $key) {
+            if (!array_key_exists($key, $source)) {
+                return null;
+            }
+
+            $source = $source[$key];
+        }
+
+        return $source;
+    }
+
+    /**
      * If placeholder not exists, method should return null
      * 
-     * @param  string $name
+     * @param  string|array $name
      * @return mixed|null
      */
     public function getPlaceholder($name) {
-        if (array_key_exists($name, $this->placeholders)) {
-            return $this->placeholders[$name];
+        if (!is_array($name)) {
+            $name = [$name];
         }
 
-        for ($i = count($this->values) - 1; $i >= 0; $i--) {
-            if (isset($this->values[$i][$name])) {
-                return $this->values[$i][$name];
+        $value = $this->getArrayAttribute($this->placeholders, $name);
+
+        if ($value === null) {
+            for ($i = count($this->values) - 1; $i >= 0; $i--) {
+                $value = $this->getArrayAttribute($this->values[$i], $name);
+
+                if ($value !== null) {
+                    return $value;
+                }
             }
         }
 
-        return null;
+        return $value;
     }
 
     /**

@@ -46,13 +46,29 @@ class TranslatorTest extends TestCase {
             return intval($input) + intval($parameter);
         });
 
+        $this->parser->registerFilter('is', function($input, $parameter) {
+            return (boolean)($input == $parameter);
+        });
+
+        $this->parser->registerFilter('then', function($input, $parameter) {
+            return $input === true ? $parameter : $input;
+        });
+
+        $this->parser->registerFilter('else', function($input, $parameter) {
+            return $input === false ? $parameter : $input;
+        });
+
         $this->parser->setPlaceholder('a', 1);
         $this->parser->setPlaceholder('b', 2);
         $this->parser->setPlaceholder('a1', 2);
+        $this->parser->setPlaceholder('arr', ['a' => ['b' => 1, 'b2' => 2]]);
     }
 
     public function providerParse() {
         return [
+            ['@CODE [+a+]', 1],
+            ['@CODE:[+a+]', 1],
+            ['@CODE: [+a+]', 1],
             ['@CODE: [[getCacheMode]]', 'cached'],
             ['@CODE: [!getCacheMode!]', 'uncached'],
             ['@CODE: [[getCacheMode? &p=`1`]]', 'cached'],
@@ -93,8 +109,13 @@ class TranslatorTest extends TestCase {
             ['@CODE: [*pagetitle@parent*]', 'pagetitleparent'],
             ['@CODE: [*pagetitle@uparent(2)*]', 'pagetitleuparent2'],
             ['@CODE: [*pagetitle@uparent([[getParam:add=`[+a+]`? &p=`3` &what=`value`]])*]', 'pagetitleuparent4'],
+            ['@CODE: [+arr.a.b+]', 1],
+            ['@CODE: [+arr.a.b[+b+]+]', 2],
+            ['@CODE: [+arr.a.b:add=`[+a+]`+]', 2],
             ['@CODE: {{chunk1}}', '<h1>1</h1>'],
             ['@CODE: {{chunk1? &c=`1`}}', '<h1>11</h1>'],
+            ['@CODE: [+a:is=`1`:then=`equal`:else=`not equal`+]', 'equal'],
+            ['@CODE: [+b:is=`1`:then=`equal`:else=`not equal`+]', 'not equal'],
         ];
     }
 
