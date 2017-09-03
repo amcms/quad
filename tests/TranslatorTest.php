@@ -3,7 +3,9 @@
 use PHPUnit\Framework\TestCase;
 
 class Parser extends \Amcms\Quad\Quad {
-
+    public function getField($name, $binding = null, $binding_arg = null) {
+        return $name . $binding . $binding_arg;
+    }
 }
 
 
@@ -88,6 +90,9 @@ class TranslatorTest extends TestCase {
             ['@CODE: [~[*a[+a+]*]~]', 'a1'],
             ['@CODE: [~[*a[+a+]*]~]', 'a1'],
             ['@CODE: [+a+][!setPlaceholder? &name=`a` &value=`3`!][+a+]', '13'],
+            ['@CODE: [*pagetitle@parent*]', 'pagetitleparent'],
+            ['@CODE: [*pagetitle@uparent(2)*]', 'pagetitleuparent2'],
+            ['@CODE: [*pagetitle@uparent([[getParam:add=`[+a+]`? &p=`3` &what=`value`]])*]', 'pagetitleuparent4'],
             ['@CODE: {{chunk1}}', '<h1>1</h1>'],
             ['@CODE: {{chunk1? &c=`1`}}', '<h1>11</h1>'],
         ];

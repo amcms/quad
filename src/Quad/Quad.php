@@ -199,10 +199,19 @@ class Quad {
     }
 
     /**
+     * Returns value of field of current document.
+     * If $binding is not null, value must be fetched
+     * for document from $binding and $binding_arg.
+     * For example, 
+     * [*pagetitle@parent*] - from parent document,
+     * [*pagetitle@uparent(2)*] - from 2-level parent, etc.
+     * 
      * @param  string $name Document field name
+     * @param  string $binding Name of binding
+     * @param  string $binding_arg Binding argument
      * @return string
      */
-    public function getField($name) {
+    public function getField($name, $binding = null, $binding_arg = null) {
         return $name;
     }
 

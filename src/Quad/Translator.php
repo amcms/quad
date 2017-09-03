@@ -18,6 +18,7 @@ class Translator {
     const T_QUOTE              = 19;    const T_EQUAL            = 20;
     const T_BINDING            = 21;    const T_COMMA            = 22;
     const T_COLON              = 23;    const T_NEGATION         = 24;
+    const T_ROUND_OPEN         = 25;    const T_ROUND_CLOSE      = 26;
     const T_WHITESPACE         = 1000;  const T_STRING           = 1001;
     const T_ANYTHING           = 2000;
 
@@ -40,6 +41,7 @@ class Translator {
         self::T_EQUAL             => '=',      self::T_WHITESPACE      => 'space',
         self::T_STRING            => 'word',   self::T_ANYTHING        => 'any',
         self::T_COLON             => ':',      self::T_NEGATION        => '!',
+        self::T_ROUND_OPEN        => '(',      self::T_ROUND_CLOSE     => ')',
     ];
 
     /**
@@ -116,6 +118,7 @@ class Translator {
             self::T_CONFIG_START      => '\[\(',  self::T_CONFIG_END      => '\)\]',
             self::T_CHUNK_START       => '\{\{',  self::T_CHUNK_END       => '\}\}',
             self::T_LINK_START        => '\[\~',  self::T_LINK_END        => '\~\]',
+            self::T_ROUND_OPEN        => '\(',    self::T_ROUND_CLOSE     => '\)',
             self::T_QUESTION          => '\?',    self::T_AMPERSAND       => '\&',
             self::T_BINDING           => '@',     self::T_QUOTE           => '`',
             self::T_EQUAL             => '=',     self::T_COLON           => ':',
@@ -210,8 +213,10 @@ class Translator {
                         self::T_CONFIG_START,      self::T_CONFIG_END,
                         self::T_CHUNK_START,       self::T_CHUNK_END, 
                         self::T_LINK_START,        self::T_LINK_END,
+                        self::T_ROUND_OPEN,        self::T_ROUND_CLOSE,
                         self::T_QUOTE,             self::T_COLON,
-                        self::T_QUESTION,          self::T_AMPERSAND
+                        self::T_QUESTION,          self::T_AMPERSAND,
+                        self::T_BINDING
                     );
 
                     if ($this->mode == self::MODE_PHP) {
@@ -251,7 +256,22 @@ class Translator {
      * @return string
      */
     private function parseVariable($openTag, $closeTag) {
-        $name = $this->parseString($inside = true, $endTag = [$closeTag, self::T_COLON]);
+        $name = $this->parseString($inside = true, $endTag = [$closeTag, self::T_COLON, self::T_BINDING]);
+
+        if ($openTag == self::T_FIELD_START && $this->iterator->isNext(self::T_BINDING)) {
+            $binding = [];
+
+            $this->iterator->expect(self::T_BINDING);
+            $binding['name'] = $this->iterator->expect(self::T_STRING);
+
+            if ($this->iterator->isNext(self::T_ROUND_OPEN)) {
+                $this->iterator->nextToken();
+                $binding['value'] = $this->parseString($inside = true, $endTag = [self::T_ROUND_CLOSE]);
+                $this->iterator->expect(self::T_ROUND_CLOSE);
+            } else {
+                $binding['value'] = null;
+            }
+        }
 
         if ($this->iterator->isNext(self::T_COLON)) {
             $filters = $this->parseFilters();
@@ -260,6 +280,14 @@ class Translator {
         $this->iterator->expect($closeTag);
 
         $output = $name;
+
+        if (!empty($binding)) {
+            if ($this->mode == self::MODE_PHP) {
+                $output .= ", '" . $binding['name'] . "', " . ($binding['value'] !== null ? $binding['value'] : 'null');
+            } else {
+                $output .= '@' . $binding['name'] . ($binding['value'] !== null ? '(' . $binding['value'] . ')' : '');
+            }
+        }
 
         if (!empty($filters) && $this->mode == self::MODE_MODX) {
             foreach ($filters as $filter) {
