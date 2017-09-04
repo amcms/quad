@@ -79,7 +79,7 @@ class Quad {
         $file  = $cache . '/' . implode('/', $parts) . '/' . $hash;
 
         if (!file_exists($file)) {
-            $path = $cache;
+            $path = realpath($cache);
 
             foreach ($parts as $part) {
                 $path .= '/' . $part;
@@ -142,7 +142,10 @@ class Quad {
      * @return string
      */
     public function parseChunk($name, $params = []) {
-        return $this->renderTemplate('partials/' . $name . '.tpl', $params);
+        if (strpos($name, '@') !== 0) {
+            $name = 'partials/' . $name . '.tpl';
+        }
+        return $this->renderTemplate($name, $params);
     }
 
     public function clearCache() {
