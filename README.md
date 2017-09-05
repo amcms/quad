@@ -6,16 +6,33 @@ Sample initialization:
 
 ```php
 class Parser extends Amcms\Quad\Quad {
-    ...
+    public function getField($name, $binding = null, $binding_arg = null) {
+        return ...
+    }
+
+    public function getConfig($name) {
+        return ...
+    }
+
+    public function makeUrl($id) {
+        return ...
+    }
 }
 
 $parser = new Parser([
     'cache'     => __DIR__ . '/cache',
     'templates' => __DIR__ . '/templates',
+    'chunks'    => __DIR__ . '/chunks',
 ]);
 ```
 then:
 ```php
+// render __DIR__ . '/templates/main.tpl
 $parser->renderTemplate('main.tpl');
+
+// render __DIR__ . '/chunks/chunk.tpl
+$parser->parseChunk('chunk', ['a' => 1]);
+
+// render inline template
 $parser->renderTemplate('@CODE: <h3>[+pagetitle+]</h3>', ['pagetitle' => 'test']);
 ```
