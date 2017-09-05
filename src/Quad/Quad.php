@@ -50,7 +50,7 @@ class Quad {
                 }
             }
         } else {
-            $filename = $this->getOption('templates') . '/' . $template;
+            $filename = $template;
             $template = @file_get_contents($filename);
 
             if ($template === false) {
@@ -129,6 +129,10 @@ class Quad {
     }
 
     public function renderTemplate($name, $params = []) {
+        if (strpos($name, '/') !== 0 && strpos($name, '@') !== 0) {
+            $name = $this->getOption('templates') . '/' . $name;
+        }
+
         $content  = $this->loadTemplate($name);
         $compiled = $this->compile($content);
         return $this->renderCompiledTemplate($compiled, $params);
@@ -143,7 +147,7 @@ class Quad {
      */
     public function parseChunk($name, $params = []) {
         if (strpos($name, '@') !== 0) {
-            $name = 'partials/' . $name . '.tpl';
+            $name = $this->getOption('chunks') . '/' . $name . '.tpl';
         }
         return $this->renderTemplate($name, $params);
     }
