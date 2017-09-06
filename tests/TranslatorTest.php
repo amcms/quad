@@ -42,6 +42,21 @@ class TranslatorTest extends TestCase {
             return '';
         });
 
+        $this->parser->registerSnippet('testSetPlaceholder', function($params) {
+            $out = '';
+
+            for ($c = 1; $c < 3; $c++) {
+                $out .= $this->parser->renderTemplate($params['tpl'], ['c' => $c]);
+            }
+
+            $this->parser->setPlaceholder('b', 5);
+            $out .= $this->parser->renderTemplate($params['tpl']);
+            $this->parser->setPlaceholder('c', 0);
+            $out .= $this->parser->renderTemplate($params['tpl'], ['b' => 0]);
+            $out .= $this->parser->renderTemplate($params['tpl']);
+            return $out;
+        });
+
         $this->parser->registerFilter('add', function($input, $parameter) {
             return intval($input) + intval($parameter);
         });
@@ -73,6 +88,10 @@ class TranslatorTest extends TestCase {
             ['@CODE: [!getCacheMode!]', 'uncached'],
             ['@CODE: [[getCacheMode? &p=`1`]]', 'cached'],
             ['@CODE: [!getCacheMode? &p=`1`!]', 'uncached'],
+            ['@CODE: [[getCacheMode?&p=`1`]]', 'cached'],
+            ['@CODE: [[getCacheMode? p=`1`]]', 'cached'],
+            ['@CODE: [[getCacheMode?p=`1`]]', 'cached'],
+            ['@CODE: [[getCacheMode?p=`1`&p2=`2`]]', 'cached'],
             ['@CODE: [!getCacheMode? &p=`[[getCacheMode]]`!]', 'uncached'],
             ['@CODE: [[getParam? &p=`1` &what=`name`]]', 'p'],
             ['@CODE: [[getParam? &p=`1` &what=`value`]]', 1],
@@ -116,6 +135,10 @@ class TranslatorTest extends TestCase {
             ['@CODE: {{chunk1? &c=`1`}}', '<h1>11</h1>'],
             ['@CODE: [+a:is=`1`:then=`equal`:else=`not equal`+]', 'equal'],
             ['@CODE: [+b:is=`1`:then=`equal`:else=`not equal`+]', 'not equal'],
+            ['@CODE: [[testSetPlaceholder? &tpl=`@CODE: [+b+]-[+a+]-[+c+] `]]', '2-1-1 2-1-2 5-1- 0-1-0 5-1-0 '],
+            ['@CODE: @[+a+]', '[+a+]'],
+            ['@CODE: A@[+a+]', 'A[+a+]'],
+            ['@CODE: A@[+a+]B[+a+]@[[snippet]]', 'A[+a+]B1[[snippet]]'],
         ];
     }
 

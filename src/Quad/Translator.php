@@ -184,6 +184,7 @@ class Translator {
                 }
             }
 
+            $value = '';
             $token = $this->iterator->nextToken();
 
             switch ($token[Tokenizer::TYPE]) {
@@ -204,6 +205,26 @@ class Translator {
                 case self::T_LINK_START: {
                     $value = $this->parseMakeUrl();
                     break;
+                }
+
+                case self::T_BINDING: {
+                    if ($this->iterator->isNext(
+                        self::T_SNIPPET_START,
+                        self::T_NC_SNIPPET_START,
+                        self::T_CHUNK_START,
+                        self::T_CONFIG_START,
+                        self::T_PLACEHOLDER_START,
+                        self::T_FIELD_START
+                    )) {
+                        $openTag  = $this->iterator->nextToken();
+                        $closeTag = $this->brackets[ $openTag[Tokenizer::TYPE] ];
+                        $value    = $openTag[Tokenizer::VALUE] . $this->iterator->joinUntil($closeTag) . $this->iterator->nextValue();
+
+                        if ($this->mode == self::MODE_PHP) {
+                            $value = "'" . $this->escape($value) . "'";
+                        }
+                        break;
+                    }
                 }
 
                 default: {
@@ -427,17 +448,26 @@ class Translator {
             $filters = $this->parseFilters();
         }
 
-        $this->iterator->nextAll(self::T_QUESTION, self::T_WHITESPACE);
+        if ($this->iterator->isNext(self::T_QUESTION)) {
+            $this->iterator->nextAll(self::T_QUESTION, self::T_WHITESPACE);
 
-        do {
-            if ($this->iterator->isNext($closeTag)) {
-                break;
-            } 
+            $i = 0;
 
-            $this->iterator->expect(self::T_AMPERSAND, $closeTag);
+            do {
+                if ($this->iterator->isNext($closeTag)) {
+                    break;
+                }
 
-            $result['params'][] = $this->parseSnippetParameter();
-        } while ($this->iterator->isNext());
+                // ampersand before first parameter can be omitted
+                if ($i++) {
+                    $this->iterator->expect(self::T_AMPERSAND);
+                } else {
+                    $this->iterator->nextToken(self::T_AMPERSAND);
+                }
+
+                $result['params'][] = $this->parseSnippetParameter();
+            } while ($this->iterator->isNext());
+        }
 
         $this->iterator->expect($closeTag);
 
