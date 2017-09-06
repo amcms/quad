@@ -140,6 +140,17 @@ class TranslatorTest extends TestCase {
             ['@CODE: @[+a+]', '[+a+]'],
             ['@CODE: A@[+a+]', 'A[+a+]'],
             ['@CODE: A@[+a+]B[+a+]@[[snippet]]', 'A[+a+]B1[[snippet]]'],
+            ['@CODE: @[(a)]', '[(a)]'],
+            ['@CODE: @[[a? &p=`a`]]', '[[a? &p=`a`]]'],
+            ['@CODE: @[[a]]', '[[a]]'],
+            ['@CODE: @[[a? &p=`a:add=`[[snippet]]`[+a+]]]', '[[a? &p=`a:add=`[[snippet]]`1]]'],
+            ['@CODE: @[!a? &p=`a`!]', '[!a? &p=`a`!]'],
+            ['@CODE: @[!a!]', '[!a!]'],
+            ['@CODE: @[!a? &p=`a:add=`[[snippet]]`!]', '[!a? &p=`a:add=`[[snippet]]`!]'],
+            ['@CODE: @{{a? &p=`a`}}', '{{a? &p=`a`}}'],
+            ['@CODE: @{{a}}', '{{a}}'],
+            ['@CODE: @{{a? &p=`a:add=`[[snippet]]`}}', '{{a? &p=`a:add=`[[snippet]]`}}'],
+            ['@CODE: [[getParam? &p=`test[[getParam? &p=`@[+b+]` &what=`value`]]` &what=`value`]]', 'test[+b+]'],
         ];
     }
 
