@@ -17,6 +17,7 @@ class TranslatorTest extends TestCase {
         $this->parser = new Parser([
             'cache'     => false,
             'templates' => __DIR__ . '/templates',
+            'chunks'    => __DIR__ . '/templates/chunks',
         ]);
 
         $this->parser->registerSnippet('getCacheMode', function($parameters, $cached) {

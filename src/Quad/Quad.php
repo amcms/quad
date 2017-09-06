@@ -213,16 +213,16 @@ class Quad {
             $name = [$name];
         }
 
-        $value = $this->getArrayAttribute($this->placeholders, $name);
+        for ($i = count($this->values) - 1; $i >= 0; $i--) {
+            $value = $this->getArrayAttribute($this->values[$i], $name);
+
+            if ($value !== null) {
+                return $value;
+            }
+        }
 
         if ($value === null) {
-            for ($i = count($this->values) - 1; $i >= 0; $i--) {
-                $value = $this->getArrayAttribute($this->values[$i], $name);
-
-                if ($value !== null) {
-                    return $value;
-                }
-            }
+            $value = $this->getArrayAttribute($this->placeholders, $name);
         }
 
         return $value;
