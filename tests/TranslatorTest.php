@@ -93,6 +93,10 @@ class TranslatorTest extends TestCase {
             ['@CODE: [[getCacheMode? p=`1`]]', 'cached'],
             ['@CODE: [[getCacheMode?p=`1`]]', 'cached'],
             ['@CODE: [[getCacheMode?p=`1`&p2=`2`]]', 'cached'],
+            ['@CODE: [[getCacheMode?
+                &p=`1`
+                &p2=`2`
+            ]]', 'cached'],
             ['@CODE: [!getCacheMode? &p=`[[getCacheMode]]`!]', 'uncached'],
             ['@CODE: [[getParam? &p=`1` &what=`name`]]', 'p'],
             ['@CODE: [[getParam? &p=`1` &what=`value`]]', 1],
@@ -151,6 +155,11 @@ class TranslatorTest extends TestCase {
             ['@CODE: @{{a}}', '{{a}}'],
             ['@CODE: @{{a? &p=`a:add=`[[snippet]]`}}', '{{a? &p=`a:add=`[[snippet]]`}}'],
             ['@CODE: [[getParam? &p=`test[[getParam? &p=`@[+b+]` &what=`value`]]` &what=`value`]]', 'test[+b+]'],
+            ['@CODE: {{-chunk1}}', ''],
+            ['@CODE: {{-chunk1?c=`1`}}[+a+]', '1'],
+            ['@CODE: [[-a]]', ''],
+            ['@CODE: [!-a!]', ''],
+            ['@CODE: test[[getParam?p=`[[-getParam]]` &what=`value`]]', 'test'],
         ];
     }
 

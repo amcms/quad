@@ -19,8 +19,8 @@ class Translator {
     const T_BINDING            = 21;    const T_COMMA            = 22;
     const T_COLON              = 23;    const T_NEGATION         = 24;
     const T_ROUND_OPEN         = 25;    const T_ROUND_CLOSE      = 26;
-    const T_DOT                = 27;
-    const T_CONTROL_START      = 28;    const T_CONTROL_END      = 29;
+    const T_DOT                = 27;    const T_MINUS            = 28;
+    const T_CONTROL_START      = 29;    const T_CONTROL_END      = 30;
     const T_WHITESPACE         = 1000;  const T_STRING           = 1001;
     const T_ANYTHING           = 2000;
 
@@ -45,7 +45,7 @@ class Translator {
         self::T_STRING            => 'word',   self::T_ANYTHING        => 'any',
         self::T_COLON             => ':',      self::T_NEGATION        => '!',
         self::T_ROUND_OPEN        => '(',      self::T_ROUND_CLOSE     => ')',
-        self::T_DOT               => '.',
+        self::T_DOT               => '.',      self::T_MINUS           => '-',
     ];
 
     /**
@@ -134,6 +134,7 @@ class Translator {
             self::T_BINDING           => '@',     self::T_QUOTE           => '`',
             self::T_EQUAL             => '=',     self::T_COLON           => ':',
             self::T_NEGATION          => '\!',    self::T_DOT             => '\.',
+            self::T_MINUS             => '-',
             self::T_STRING            => '\\w+',  self::T_WHITESPACE      => '[\\s\\n\\r]+',
             self::T_ANYTHING          => '.',
         ]);
@@ -457,6 +458,13 @@ class Translator {
      * @return string
      */
     private function parseSnippet($openTag, $closeTag) {
+        $isComment = false;
+
+        if ($this->iterator->isNext(self::T_MINUS)) {
+            $this->iterator->nextToken();
+            $isComment = true;
+        }
+
         $result = [
             'name'   => $this->parseString($inside = true, $endTag = [$closeTag, self::T_QUESTION, self::T_WHITESPACE, self::T_AMPERSAND, self::T_COLON]),
             'type'   => $openTag,
@@ -490,6 +498,10 @@ class Translator {
         }
 
         $this->iterator->expect($closeTag);
+
+        if ($isComment) {
+            return "''";
+        }
 
         $output = $result['name'];
         

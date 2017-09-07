@@ -117,7 +117,7 @@ class Quad {
         if ($this->getOption('cache') !== false) {
             include($filename);
         } else {
-            eval(preg_replace('/<\?php (.+) \?>/s', '$1', $filename));
+            eval(preg_replace('/<\?php (.+)$/s', '$1', $filename));
         }
 
         $output = ob_get_contents();
