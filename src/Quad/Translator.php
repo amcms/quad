@@ -20,6 +20,7 @@ class Translator {
     const T_COLON              = 23;    const T_NEGATION         = 24;
     const T_ROUND_OPEN         = 25;    const T_ROUND_CLOSE      = 26;
     const T_DOT                = 27;
+    const T_CONTROL_START      = 28;    const T_CONTROL_END      = 29;
     const T_WHITESPACE         = 1000;  const T_STRING           = 1001;
     const T_ANYTHING           = 2000;
 
@@ -30,6 +31,7 @@ class Translator {
      * Token symbols, used for error message only
      */
     private $symbols = [
+        self::T_CONTROL_START     => '{%',     self::T_CONTROL_END     => '%}',
         self::T_SNIPPET_START     => '[[',     self::T_SNIPPET_END     => ']]',
         self::T_NC_SNIPPET_START  => '[!',     self::T_NC_SNIPPET_END  => '!]',
         self::T_FIELD_START       => '[*',     self::T_FIELD_END       => '*]',
@@ -111,8 +113,15 @@ class Translator {
      */
     private $level = 0;
 
+    /**
+     * List of registered control tags
+     * @var array
+     */
+    private $controls = [];
+
     public function __construct() {
         $this->tokenizer = new Tokenizer([
+            self::T_CONTROL_START     => '\{%',   self::T_CONTROL_END     => '%\}',
             self::T_SNIPPET_START     => '\[\[',  self::T_SNIPPET_END     => '\]\]',
             self::T_NC_SNIPPET_START  => '\[\!',  self::T_NC_SNIPPET_END  => '\!\]',
             self::T_FIELD_START       => '\[\*',  self::T_FIELD_END       => '\*\]',
@@ -128,6 +137,10 @@ class Translator {
             self::T_STRING            => '\\w+',  self::T_WHITESPACE      => '[\\s\\n\\r]+',
             self::T_ANYTHING          => '.',
         ]);
+
+        $this->registerControl('if', Controls\IfControl::class);
+//        $this->registerControl('for', Controls\ForControl::class);
+//        $this->registerControl('switch', Controls\SwitchControl::class);
     }
 
     /**
@@ -158,8 +171,9 @@ class Translator {
                 $output[] = $this->symbols[$token];
             }
 
-            return "Unexpected token '" . $e->getToken() . "' at offset " . $offset . 
-                " near '" . substr($input, $offset, 10) . "...', expected '" . implode($output) . "'!";
+            return "Unexpected token '" . $e->getToken() . "' at offset " . $offset . " near '" . 
+                str_replace(["\n", "\r"], ['\\n', '\\r'], substr($input, $offset, 10)) . 
+                "...', expected '" . implode($output) . "'!";
         }
     }
 
@@ -188,6 +202,11 @@ class Translator {
             $token = $this->iterator->nextToken();
 
             switch ($token[Tokenizer::TYPE]) {
+                case self::T_CONTROL_START: {
+                    $value = $this->parseControl();
+                    break;
+                }
+
                 case self::T_SNIPPET_START:
                 case self::T_NC_SNIPPET_START:
                 case self::T_CHUNK_START: {
@@ -229,6 +248,7 @@ class Translator {
 
                 default: {
                     $value = $token[Tokenizer::VALUE] . $this->iterator->joinUntil(
+                        self::T_CONTROL_START,     self::T_CONTROL_END, 
                         self::T_SNIPPET_START,     self::T_SNIPPET_END, 
                         self::T_NC_SNIPPET_START,  self::T_NC_SNIPPET_END, 
                         self::T_FIELD_START,       self::T_FIELD_END, 
@@ -257,7 +277,7 @@ class Translator {
             throw new \Exception('Unexpected end of template', 1);
         }
 
-        return '<?php echo ' . implode(', ', $result) . '; ?>';
+        return '<?php echo ' . implode(', ', $result) . ';';
     }
 
     /**
@@ -509,6 +529,34 @@ class Translator {
      */
     private function escape($string) {
         return str_replace("'", "\\'", $string);
+    }
+
+    public function registerControl($name, $class) {
+        $this->controls[$name] = $class;
+    }
+
+    private function parseControl() {
+        if ($this->mode == self::MODE_MODX) {
+            throw new \Exception("Control tags not allowed in inline templates");
+        }
+
+        if ($this->level > 1) {
+            throw new \Exception("Control tags not allowed in nested instructions");
+        }
+
+        $this->iterator->nextAll(self::T_WHITESPACE);
+        $name = $this->iterator->nextValue(self::T_STRING);
+        $this->iterator->nextAll(self::T_WHITESPACE);
+
+        if (!array_key_exists($name, $this->controls)) {
+            throw new \Exception("Unknown control tag '$name'");
+        }
+
+        if (is_string($this->controls[$name])) {
+            $this->controls[$name] = new $this->controls[$name]($this->iterator);
+        }
+
+        return $this->controls[$name]->parse();
     }
 
 }
