@@ -160,6 +160,12 @@ class TranslatorTest extends TestCase {
             ['@CODE: [[-a]]', ''],
             ['@CODE: [!-a!]', ''],
             ['@CODE: test[[getParam?p=`[[-getParam]]` &what=`value`]]', 'test'],
+            ['@CODE: [-comment-]1', 1],
+            ['@CODE: [-comment
+            on
+            newline-]1', 1],
+            ['@CODE: [[-te[-comment-]st1]]', ''],
+            ['@CODE: [-comment-][[-test1]][-com[[-test1]]ment-]2', 2],
         ];
     }
 

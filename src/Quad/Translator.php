@@ -21,6 +21,7 @@ class Translator {
     const T_ROUND_OPEN         = 25;    const T_ROUND_CLOSE      = 26;
     const T_DOT                = 27;    const T_MINUS            = 28;
     const T_CONTROL_START      = 29;    const T_CONTROL_END      = 30;
+    const T_COMMENT_START      = 31;    const T_COMMENT_END      = 32;
     const T_WHITESPACE         = 1000;  const T_STRING           = 1001;
     const T_ANYTHING           = 2000;
 
@@ -46,6 +47,7 @@ class Translator {
         self::T_COLON             => ':',      self::T_NEGATION        => '!',
         self::T_ROUND_OPEN        => '(',      self::T_ROUND_CLOSE     => ')',
         self::T_DOT               => '.',      self::T_MINUS           => '-',
+        self::T_COMMENT_START     => '[-',     self::T_COMMENT_END     => '-]',
     ];
 
     /**
@@ -129,6 +131,7 @@ class Translator {
             self::T_CONFIG_START      => '\[\(',  self::T_CONFIG_END      => '\)\]',
             self::T_CHUNK_START       => '\{\{',  self::T_CHUNK_END       => '\}\}',
             self::T_LINK_START        => '\[\~',  self::T_LINK_END        => '\~\]',
+            self::T_COMMENT_START     => '\[-',   self::T_COMMENT_END     => '-\]',
             self::T_ROUND_OPEN        => '\(',    self::T_ROUND_CLOSE     => '\)',
             self::T_QUESTION          => '\?',    self::T_AMPERSAND       => '\&',
             self::T_BINDING           => '@',     self::T_QUOTE           => '`',
@@ -227,6 +230,13 @@ class Translator {
                     break;
                 }
 
+                case self::T_COMMENT_START: {
+                    $this->iterator->nextUntil(self::T_COMMENT_END);
+                    $this->iterator->nextToken();
+                    $value = "''";
+                    break;
+                }
+
                 case self::T_BINDING: {
                     if ($this->iterator->isNext(
                         self::T_SNIPPET_START,
@@ -257,6 +267,7 @@ class Translator {
                         self::T_CONFIG_START,      self::T_CONFIG_END,
                         self::T_CHUNK_START,       self::T_CHUNK_END, 
                         self::T_LINK_START,        self::T_LINK_END,
+                        self::T_COMMENT_START,     self::T_COMMENT_END, 
                         self::T_ROUND_OPEN,        self::T_ROUND_CLOSE,
                         self::T_QUOTE,             self::T_COLON,
                         self::T_QUESTION,          self::T_AMPERSAND,
