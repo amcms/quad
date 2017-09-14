@@ -33,7 +33,7 @@ class Quad {
     /**
      * Loads template contents, if $template is filename,
      * or removes binding if it present
-     * 
+     *
      * @param  string $template Template name/content
      * @return string
      */
@@ -63,7 +63,7 @@ class Quad {
 
     /**
      * Compiles template and/or returns filename of compiled php file
-     * 
+     *
      * @param  string $template Template content
      * @return string
      */
@@ -117,7 +117,7 @@ class Quad {
         if ($this->getOption('cache') !== false) {
             include($filename);
         } else {
-            eval(preg_replace('/<\?php (.+)$/s', '$1', $filename));
+            eval(preg_replace('/<\?php\s*(.+)$/s', '$1', $filename));
         }
 
         $output = ob_get_contents();
@@ -140,7 +140,7 @@ class Quad {
 
     /**
      * Render chunk
-     * 
+     *
      * @param  string $name
      * @param  array  $params
      * @return string
@@ -158,7 +158,7 @@ class Quad {
 
     /**
      * Runs snippet
-     * 
+     *
      * @param  string  $name
      * @param  array   $params
      * @param  boolean $cached
@@ -184,8 +184,19 @@ class Quad {
     }
 
     /**
+     * Removes placeholder from set
+     *
+     * @param string $name Name of the placeholder to unset
+     */
+    public function unsetPlaceholder($name) {
+        if (array_key_exists($name, $this->placeholders)) {
+            unset($this->palceholders[$name]);
+        }
+    }
+
+    /**
      * Returns value of key, that presents with $path
-     * 
+     *
      * @param  array $source
      * @param  array $path Array of keys for search in $source
      * @return mixed|null
@@ -204,7 +215,7 @@ class Quad {
 
     /**
      * If placeholder not exists, method should return null
-     * 
+     *
      * @param  string|array $name
      * @return mixed|null
      */
@@ -232,10 +243,10 @@ class Quad {
      * Returns value of field of current document.
      * If $binding is not null, value must be fetched
      * for document from $binding and $binding_arg.
-     * For example, 
+     * For example,
      * [*pagetitle@parent*] - from parent document,
      * [*pagetitle@uparent(2)*] - from 2-level parent, etc.
-     * 
+     *
      * @param  string $name Document field name
      * @param  string $binding Name of binding
      * @param  string $binding_arg Binding argument

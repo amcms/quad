@@ -17,12 +17,22 @@
             }
 
             $pos = $this->position + 1;
-            
+
             while (($next = $this->tokens[$pos] ?? null) && in_array($next[Tokenizer::TYPE], $this->ignored, true)) {
                 $pos++;
             }
 
             throw new UnexpectedTokenException($args, $next);
+        }
+
+        public function expectString($string) {
+            $token = $this->expect(Translator::T_STRING);
+
+            if ($token != $string) {
+                throw new Exception("Missed expected token '$string'");
+            }
+
+            return $token;
         }
 
     }

@@ -58,8 +58,20 @@ class TranslatorTest extends TestCase {
             return $out;
         });
 
+        $this->parser->registerSnippet('values', function() {
+            return [1, 2, 5];
+        });
+
         $this->parser->registerFilter('add', function($input, $parameter) {
             return intval($input) + intval($parameter);
+        });
+
+        $this->parser->registerFilter('is', function($input, $parameter) {
+            return (boolean)($input == $parameter);
+        });
+
+        $this->parser->registerFilter('gt', function($input, $parameter) {
+            return (boolean)($input > $parameter);
         });
 
         $this->parser->registerFilter('is', function($input, $parameter) {
@@ -141,9 +153,14 @@ class TranslatorTest extends TestCase {
             ['@CODE: [+a:is=`1`:then=`equal`:else=`not equal`+]', 'equal'],
             ['@CODE: [+b:is=`1`:then=`equal`:else=`not equal`+]', 'not equal'],
             ['@CODE: [[testSetPlaceholder? &tpl=`@CODE: [+b+]-[+a+]-[+c+] `]]', '2-1-1 2-1-2 5-1- 0-1-0 5-1-0 '],
+            ['@CODE: [[testSetPlaceholder? &tpl=`@CODE: [+c+]-[[testSetPlaceholder? &tpl=`@CODE: [+b+]-[+c+] `]]`]]', '1-2-1 2-2 5-1 0-1 5-1 2-5-1 5-2 5-2 0-2 5-2 0-5-1 5-2 5-0 0-0 5-0 0-0-1 0-2 0-0 0-0 0-0 0-5-1 5-2 5-0 0-0 5-0 '],
             ['@CODE: @[+a+]', '[+a+]'],
             ['@CODE: A@[+a+]', 'A[+a+]'],
             ['@CODE: A@[+a+]B[+a+]@[[snippet]]', 'A[+a+]B1[[snippet]]'],
+            ['@CODE: [@@[+a+]]', '[1]'],
+            ['@CODE: [@@[+a+]@[+a+]]', '[1[+a+]]'],
+            ['@CODE: [+a+][@[+a+]@@[+a+]]', '1[[+a+]1]'],
+            ['@CODE: {@@{test: 1}}', '{{test: 1}}'],
             ['@CODE: @[(a)]', '[(a)]'],
             ['@CODE: @[[a? &p=`a`]]', '[[a? &p=`a`]]'],
             ['@CODE: @[[a]]', '[[a]]'],
@@ -166,6 +183,26 @@ class TranslatorTest extends TestCase {
             newline-]1', 1],
             ['@CODE: [[-te[-comment-]st1]]', ''],
             ['@CODE: [-comment-][[-test1]][-com[[-test1]]ment-]2', 2],
+            ['@CODE: {%if[+a:is=`1`+]%}yes{%endif%}', 'yes'],
+            ['@CODE: {% if [+a:is=`1`+] %}yes{% endif %}', 'yes'],
+            ['@CODE: {%if`[+a:is=`1`+]`%}yes{%endif%}', 'yes'],
+            ['@CODE: {% if `[+a:is=`1`+]` %}yes{% endif %}', 'yes'],
+            ['@CODE: {%  if  [+a:is=`1`+]   %} yes {%   endif   %}', ' yes '],
+            ['@CODE: {% if [+a:is=`2`+] %}yes{% else %}no{% endif %}', 'no'],
+            ['@CODE: {% if [+a:is=`[[getParam? &p=`2` &what=`value`]]`+] %}yes{% else %}no{% endif %}', 'no'],
+            ['@CODE: {% if [[getParam:is=`2`? &p=`2` &what=`value`]] %}yes{% else %}no{% endif %}', 'yes'],
+            ['@CODE: {% if [+a:is=`2`+] %}1{% elseif [+a:is=`1`+] %}2{% else %}3{% endif %}', '2'],
+            ['@CODE: [{%for`i`in[[values]]%}[+i_index+]-[+i+],{%endfor%}]', '[0-1,1-2,2-5,]'],
+            ['@CODE: [{% for `i` in [[values]] %}[+i_index+]-[+i+],{% endfor %}]', '[0-1,1-2,2-5,]'],
+            ['@CODE: [{%  for  `i`  in  [[values]]  %}[+i_index+]-[+i+],{%  endfor  %}]', '[0-1,1-2,2-5,]'],
+            ['@CODE: {% for `i` in [[values]] %}{% if [+i_index:gt=`0`+] %},{% endif %}[+i_index+]-[+i+]{% endfor %}', '0-1,1-2,2-5'],
+            ['@CODE: {% for `i` in [[values]] %}[+i_index:gt=`0`:then=`,`+][+i_index+]-[+i+]{% endfor %}', '0-1,1-2,2-5'],
+            ['@CODE: {% for `i` in [[values]] %}[+i_index+]-[+i_iteration+]-[+i_first+]-[+i_last+]-[+i_odd+],{% endfor %},[+i_length+]', '0-1-1-0-1,1-2-0-0-0,2-3-0-1-1,,3'],
+            ['@CODE: {% switch [+a+] %}{% case `1` %}one{% endcase %}{% default %}error{% enddefault %}{% endswitch %}', 'one'],
+            ['@CODE: {%switch[+a+]%} {%case`1`%}one{%endcase%} {%default%}error{%enddefault%}{%endswitch%}', 'one'],
+            ['@CODE: {% switch `[+a+]` %}{% case 2 %}one{% endcase %}{% case 1 %}two{% endcase %}{% endswitch %}', 'two'],
+            ['@CODE: {% switch [+a+] %}{% case `2` %}one{% endcase %}{% default %}error{% enddefault %}{% endswitch %}', 'error'],
+            ['@CODE: {% switch [+b+] %}{% case [[getParam? &p=`2` &what=`value`]] %}right{% endcase %}{% endswitch %}', 'right'],
         ];
     }
 
