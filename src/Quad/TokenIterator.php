@@ -29,7 +29,7 @@
             $token = $this->expect(Translator::T_STRING);
 
             if ($token != $string) {
-                throw new Exception("Missed expected token '$string'");
+                throw new \Exception("Missed expected token '$string'");
             }
 
             return $token;

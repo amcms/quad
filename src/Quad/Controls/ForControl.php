@@ -48,7 +48,7 @@ class ForControl extends Control {
 
         $output  = "\$$index = 0;\n";
         $output .= "\$source = $source;\n";
-        $output .= "\$$length = count(\$source);";
+        $output .= "\$$length = count(\$source);\n";
         $output .= "\$api->setPlaceholder('$length', \$$length);\n";
         $output .= "foreach (\$source as \$$item) {\n";
         $output .= "\$api->setPlaceholder('$index', \$$index);\n";
@@ -60,7 +60,7 @@ class ForControl extends Control {
         $output .= $body;
         $output .= "\$$index++;\n";
         $output .= "}\n";
-        
+
         return $output;
     }
 
