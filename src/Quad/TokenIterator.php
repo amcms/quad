@@ -18,7 +18,7 @@
 
             $pos = $this->position + 1;
 
-            while (($next = $this->tokens[$pos] ?? null) && in_array($next[Tokenizer::TYPE], $this->ignored, true)) {
+            while (($next = $this->tokens[$pos] ? $this->tokens[$pos] : null) && in_array($next[Tokenizer::TYPE], $this->ignored, true)) {
                 $pos++;
             }
 
