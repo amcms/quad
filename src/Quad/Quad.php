@@ -14,7 +14,7 @@ class Quad {
 
     private $placeholders = [];
 
-    public function __construct($options) {
+    public function __construct($options = []) {
         $this->translator = new Translator;
 
         foreach ($options as $option => $value) {
@@ -46,19 +46,44 @@ class Quad {
                 }
 
                 default: {
-                    throw new \Exception("Unknown binding '" . $matches[1] . "'", 1);
+                    throw new Exceptions\UnknownBindingException("Unknown binding '" . $matches[1] . "'");
                 }
             }
         } else {
             $filename = $template;
-            $template = @file_get_contents($filename);
 
-            if ($template === false) {
-                throw new \Exception("Cannot read template '" . $filename . "'", 1);
+            if (!is_dir($filename) && is_readable($filename)) {
+                $template = file_get_contents($filename);
+            } else {
+                throw new Exceptions\FileNotFoundException("Cannot read template '" . $filename . "'");
             }
         }
 
         return $template;
+    }
+
+    public function getCompiledTemplateName($template) {
+        $cache = $this->getOption('cache');
+
+        $hash  = hash('sha256', $template) . '.php';
+        $parts = [substr($hash, 0, 1), substr($hash, 1, 1)];
+
+        return realpath($cache) . '/' . implode('/', $parts) . '/' . $hash;
+    }
+
+    public function createDirectories($file) {
+        $parts = explode('/', trim(pathinfo($file, PATHINFO_DIRNAME), '/'));
+        $path = '';
+
+        foreach ($parts as $part) {
+            $path .= '/' . $part;
+
+            if (!file_exists($path)) {
+                if (@mkdir($path, 0700) === false ) {
+                    throw new Exceptions\FileSaveException("Cannot create directory '" . $path . "'");
+                }
+            }
+        }
     }
 
     /**
@@ -67,37 +92,24 @@ class Quad {
      * @param  string $template Template content
      * @return string
      */
-    private function compile($template) {
+    public function compile($template) {
         $cache = $this->getOption('cache');
 
         if ($cache === false) {
             return $this->translator->parse($template);
         }
 
-        $hash  = hash('sha256', $template) . '.php';
-        $parts = [substr($hash, 0, 1), substr($hash, 1, 1)];
-        $file  = $cache . '/' . implode('/', $parts) . '/' . $hash;
+        $file = $this->getCompiledTemplateName($template);
 
         if (!file_exists($file)) {
-            $path = realpath($cache);
-
-            foreach ($parts as $part) {
-                $path .= '/' . $part;
-
-                if (!file_exists($path)) {
-                    if (@mkdir($path, 0700) === false ) {
-                        throw new \Exception("Cannot create directory '" . $path . "'", 1);
-                    }
-                }
-            }
-
+            $this->createDirectories($file);
             $output = $this->translator->parse($template);
 
             if (@file_put_contents($file, $output) === false) {
-                throw new \Exception("Cannot save compiled template '" . $file . "'", 1);
+                throw new Exceptions\FileSaveException("Cannot save compiled template '" . $file . "'");
             }
-        } elseif (!is_readable($file)) {
-            throw new \Exception("Compiled template '" . $file . "' exists but not readable", 1);
+        } elseif (is_dir($file) || !is_readable($file)) {
+            throw new Exceptions\FileNotFoundException("Compiled template '" . $file . "' exists but not readable");
         }
 
         return $file;

@@ -176,7 +176,7 @@ class Translator {
 
         try {
             return "<?php\n" . $this->parseString();
-        } catch (UnexpectedTokenException $e) {
+        } catch (Exceptions\UnexpectedTokenException $e) {
             $tokens = $e->getExpectedTokens();
             $tokens = array_reverse($tokens);
             $offset = $e->getOffset();
