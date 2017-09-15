@@ -6,4 +6,4 @@ php:
   - '7.1'
   
 script:
-  - phpunit --coverage-text --coverage-clover=coverage.clover
+  - phpunit --coverage-text --coverage-clover=coverage.clover tests
