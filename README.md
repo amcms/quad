@@ -1,5 +1,8 @@
 # Quad
 
+https://travis-ci.org/amcms/quad.svg?branch=master
+https://img.shields.io/badge/PHP-%3E=v5.6-green.svg?php=5.6
+
 It's a template engine, based on MODX syntax, with precompilation in php code
 
 Sample initialization:
