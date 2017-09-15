@@ -6,4 +6,5 @@ php:
   - '7.1'
   
 script:
-  - ./phpunit
+  - vendor/bin/phpcs --standard=psr2 src/
+  - vendor/bin/phpunit --coverage-text --coverage-clover=coverage.clover
