@@ -20,6 +20,8 @@ class Quad {
         foreach ($options as $option => $value) {
             $this->setOption($option, $value);
         }
+
+        new Filters($this);
     }
 
     public function setOption($option, $value) {
@@ -72,8 +74,9 @@ class Quad {
     }
 
     public function createDirectories($file) {
-        $parts = explode('/', trim(pathinfo($file, PATHINFO_DIRNAME), '/'));
-        $path = '';
+        $file  = str_replace(DIRECTORY_SEPARATOR, '/', $file);
+        $parts = explode('/', pathinfo($file, PATHINFO_DIRNAME));
+        $path  = array_shift($parts);
 
         foreach ($parts as $part) {
             $path .= '/' . $part;
@@ -290,20 +293,28 @@ class Quad {
      * @return string
      */
     public function applyFilters($input, $filters = []) {
+        $value = $input;
+
         foreach ($filters as $filter) {
             if (!array_key_exists($filter[0], $this->filters)) {
                 continue;
             }
 
-            $function = $this->filters[ $filter[0] ];
-            $input = $function($input, $filter[1]);
-
-            if ($input === null) {
-                break;
+            if ($filter[0] == 'then' && $value === false) {
+                continue;
             }
+
+            if ($filter[0] == 'else' && ($value === true || $input === true)) {
+                continue;
+            }
+
+            $function = $this->filters[ $filter[0] ];
+
+            $input = $value;
+            $value = call_user_func_array($function, [$input, $filter[1]]);
         }
 
-        return $input;
+        return $value;
     }
 
     public function registerFilter($name, $function) {

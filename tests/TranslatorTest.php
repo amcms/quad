@@ -66,26 +66,6 @@ class TranslatorTest extends TestCase {
             return intval($input) + intval($parameter);
         });
 
-        $this->parser->registerFilter('is', function($input, $parameter) {
-            return (boolean)($input == $parameter);
-        });
-
-        $this->parser->registerFilter('gt', function($input, $parameter) {
-            return (boolean)($input > $parameter);
-        });
-
-        $this->parser->registerFilter('is', function($input, $parameter) {
-            return (boolean)($input == $parameter);
-        });
-
-        $this->parser->registerFilter('then', function($input, $parameter) {
-            return $input === true ? $parameter : $input;
-        });
-
-        $this->parser->registerFilter('else', function($input, $parameter) {
-            return $input === false ? $parameter : $input;
-        });
-
         $this->parser->setPlaceholder('a', 1);
         $this->parser->setPlaceholder('b', 2);
         $this->parser->setPlaceholder('a1', 2);
