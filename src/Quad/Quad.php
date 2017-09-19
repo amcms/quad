@@ -218,7 +218,7 @@ class Quad {
      */
     private function getArrayAttribute($source, $path) {
         foreach ($path as $key) {
-            if (!array_key_exists($key, $source)) {
+            if (!isset($source[$key])) {
                 return null;
             }
 
