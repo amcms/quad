@@ -8,7 +8,7 @@ class Filters {
 
     private $filters = [
         'filterEquals'              => ['is', 'eq', 'equals', 'equalto', 'isequal', 'isequalto'],
-        'filterNot'                 => ['ne', 'neq', 'not', 'isnot', 'notequals', 'notequalto'],
+        'filterNot'                 => ['ne', 'neq', 'not', 'isnot', 'isnt', 'notequals', 'notequalto'],
         'filterGreaterThan'         => ['gt', 'isgt', 'greaterthan', 'isgreaterthan'],
         'filterGreaterThanOrEquals' => ['gte', 'isgte', 'ge', 'eg', 'equalorgreaterthan', 'greaterthanorequalto'],
         'filterLowerThan'           => ['lt', 'islt', 'lessthan', 'lowerthan', 'islessthan', 'islowerthan'],
@@ -18,33 +18,46 @@ class Filters {
         'filterIn'                  => ['in', 'inarray', 'in_array'],
         'filterNotIn'               => ['notin', '!in', '!inarray', 'notinarray', '!in_array'],
 
+        'modifierAbs'               => ['abs'],
+        'modifierAdd'               => ['add', 'incr', 'increment', 'plus'],
         'modifierAppend'            => ['after', 'append'],
-        'modifierPrepend'           => ['before', 'prepend'],
-        'modifierLowerCase'         => ['lcase', 'lowercase', 'strtolower', 'tolower', 'lower'],
-        'modifierUpperCase'         => ['ucase', 'uppercase', 'strtoupper', 'toupper', 'upper'],
-        'modifierUcwords'           => ['ucwords'],
-        'modifierUcfirst'           => ['ucfirst'],
-        'modifierHtmlEntities'      => ['htmlent', 'htmlentities'],
-        'modifierHtmlSpecialChars'  => ['htmlspecial', 'htmlspecchars', 'htmlspecialchars'],
+        'modifierCapitalize'        => ['capitalize', 'cap'],
+        'modifierCeil'              => ['ceil'],
+        'modifierDateFormat'        => ['dateformat', 'date_format', 'dateFormat', 'formatDate', 'format_date', 'date'],
+        'modifierDivide'            => ['div', 'divide'],
+        'modifierEllipsis'          => ['ellipsis'],
         'modifierEscape'            => ['e', 'esc', 'escape'],
+        'modifierFloor'             => ['floor'],
+        'modifierHtmlDecode'        => ['html_decode', 'decode_html', 'html_entity_decode'],
+        'modifierHtmlEntities'      => ['htmlent', 'htmlentities'],
+        'modifierHtmlSpecialChars'  => ['htmlspecial', 'htmlspecchars', 'htmlspecialchars', 'hsc'],
+        'modifierLimit'             => ['limit'],
+        'modifierLowerCase'         => ['lcase', 'lowercase', 'strtolower', 'tolower', 'lower'],
+        'modifierLTrim'             => ['ltrim'],
+        'modifierModulus'           => ['mod', 'modulus'],
+        'modifierMoneyFormat'       => ['moneyformat', 'money_format'],
+        'modifierMultiply'          => ['mpe', 'multiply'],
+        'modifierNl2Br'             => ['nl2br'],
+        'modifierNumberFormat'      => ['numberformat', 'number_format', 'numberFormat'],
+        'modifierPrepend'           => ['before', 'prepend'],
+        'modifierReplace'           => ['replace'],
+        'modifierReverseString'     => ['reverse', 'strrev'],
+        'modifierRound'             => ['round'],
+        'modifierRTrim'             => ['rtrim'],
+        'modifierSpamProtect'       => ['spam_protect', 'spamprotect'],
         'modifierStrip'             => ['strip'],
         'modifierStripString'       => ['stripString', 'stripstring', 'stripstr', 'strip_string', 'strip_str'],
-        'modifierReplace'           => ['replace'],
         'modifierStripTags'         => ['striptags', 'stripTags', 'notags', 'strip_tags'],
-        'modifierReverseString'     => ['reverse', 'strrev'],
+        'modifierStrToTime'         => ['strtotime', 'totime'],
+        'modifierSubtract'          => ['subtract', 'decr', 'decrement', 'minus'],
+        'modifierTrim'              => ['trim'],
+        'modifierUcfirst'           => ['ucfirst'],
+        'modifierUcwords'           => ['ucwords'],
+        'modifierUpperCase'         => ['ucase', 'uppercase', 'strtoupper', 'toupper', 'upper'],
+        'modifierUrlDecode'         => ['urldecode', 'url_decode', 'decode_url'],
+        'modifierUrlEncode'         => ['urlencode', 'url_encode', 'encode_url'],
         'modifierWordWrap'          => ['wordwrap'],
         'modifierWordWrapCut'       => ['wordwrapcut'],
-        'modifierLimit'             => ['limit'],
-        'modifierEllipsis'          => ['ellipsis'],
-        'modifierNl2Br'             => ['nl2br'],
-        'modifierStrToTime'         => ['strtotime', 'totime'],
-        'modifierAdd'               => ['add', 'incr', 'increment', 'plus'],
-        'modifierSubtract'          => ['subtract', 'decr', 'decrement', 'minus'],
-        'modifierMultiply'          => ['mpe', 'multiply'],
-        'modifierDivide'            => ['div', 'divide'],
-        'modifierModulus'           => ['mod', 'modulus'],
-        'modifierUrlEncode'         => ['urlencode'],
-        'modifierUrlDecode'         => ['urldecode'],
 
         'getterThen'                => ['then'],
         'getterElse'                => ['else'],
@@ -294,6 +307,82 @@ class Filters {
 
     public function modifierUrlDecode($input) {
         return urldecode($input);
+    }
+
+    public function modifierCapitalize($input) {
+        return mb_strtoupper(mb_substr($input, 0, 1)) . mb_strtolower(mb_substr($input, 1, null));
+    }
+
+    public function modifierTrim($input, $parameter) {
+        if (is_string($input)) {
+            if ($parameter !== null) {
+                return trim($input, $parameter);
+            } else {
+                return trim($input);
+            }
+        }
+
+        return $input;
+    }
+
+    public function modifierDateFormat($input, $parameter) {
+        if (is_numeric($input) && $parameter !== null) {
+            $input = date($input, $parameter);
+        }
+
+        return $input;
+    }
+
+    public function modifierNumberFormat($input, $parameter) {
+        return $input;
+    }
+
+    public function modifierRound($input) {
+        return round($input);
+    }
+
+    public function modifierFloor($input) {
+        return floor($input);
+    }
+
+    public function modifierCeil($input) {
+        return ceil($input);
+    }
+
+    public function modifierHtmlDecode($input) {
+        return html_entity_decode($input, ENT_QUOTES, $this->encoding);
+    }
+
+    public function modifierSpamProtect($input, $parameter) {
+        return str_replace(['@', '.'], ['&#64;', '&#46;'], $input);
+    }
+
+    public function modifierMoneyFormat($input, $parameter) {
+        if (is_numeric($input)) {
+            $input = money_format($parameter, $input);
+        }
+
+        return $input;
+    }
+
+    public function modifierLTrim($input, $parameter) {
+        if ($parameter !== null) {
+            return ltrim($input, $parameter);
+        }
+
+        return ltrim($input);
+    }
+
+    public function modifierRTrim($input, $parameter) {
+        if ($parameter !== null) {
+            return rtrim($input, $parameter);
+        }
+
+        return rtrim($input);
+    }
+
+    public function modifierAbs($input) {
+        return abs($input);
     }
 
     public function getterThen($input, $parameter) {
