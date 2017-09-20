@@ -70,10 +70,12 @@ class Filters {
         'getterLast'                => ['last'],
     ];
 
-    public function __construct($api) {
-        foreach ($this->filters as $method => $names) {
-            foreach ($names as $name) {
-                $api->registerFilter($name, [$this, $method]);
+    public function __construct($api = null) {
+        if ($api) {
+            foreach ($this->filters as $method => $names) {
+                foreach ($names as $name) {
+                    $api->registerFilter($name, [$this, $method]);
+                }
             }
         }
     }
