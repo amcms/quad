@@ -250,14 +250,34 @@ class Filters {
     }
 
     public function modifierEllipsis($input, $parameter) {
+        $limit  = $parameter > 0 ? intval($parameter) : 100;
+        $output = html_entity_decode($input, ENT_COMPAT, $this->encoding);
+        $length = mb_strlen($output, $this->encoding);
+
+        if ($limit > $length) {
+            return $input;
+        }
+
+        $breakpoint = mb_strpos($output, ' ', $limit, $this->encoding);
+
+        if ($breakpoint !== false) {
+            if ($breakpoint < $length - 1) {
+                return mb_substr($output, 0, $breakpoint, $this->encoding) . '...';
+            }
+        }
+
         return $input;
     }
 
-    public function modifierNl2Br($input, $parameter) {
-        return $input;
+    public function modifierNl2Br($input) {
+        return nl2br($input);
     }
 
-    public function modifierStrToTime($input, $parameter) {
+    public function modifierStrToTime($input) {
+        if (is_string($input)) {
+            return strtotime($input);
+        }
+
         return $input;
     }
 
@@ -346,6 +366,16 @@ class Filters {
     }
 
     public function modifierNumberFormat($input, $parameter) {
+        if (is_number($input)) {
+            $p = explode('||', $parameter);
+
+            if (count($p) == 3) {
+                return number_format($input, $p[0], $p[1], $p[2]);
+            } else {
+                return number_format($input, $p[0]);
+            }
+        }
+
         return $input;
     }
 
