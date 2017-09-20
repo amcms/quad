@@ -22,7 +22,7 @@
                 $pos++;
             }
 
-            throw new UnexpectedTokenException($args, $next);
+            throw new Exceptions\UnexpectedTokenException($args, $next);
         }
 
         public function expectString($string) {

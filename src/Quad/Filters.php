@@ -17,6 +17,8 @@ class Filters {
         'filterContainsNot'         => ['containsnot'],
         'filterIn'                  => ['in', 'inarray', 'in_array'],
         'filterNotIn'               => ['notin', '!in', '!inarray', 'notinarray', '!in_array'],
+        'filterEmpty'               => ['empty'],
+        'filterNotEmpty'            => ['!empty', 'notempty'],
 
         'modifierAbs'               => ['abs'],
         'modifierAdd'               => ['add', 'incr', 'increment', 'plus'],
@@ -61,8 +63,8 @@ class Filters {
 
         'getterThen'                => ['then'],
         'getterElse'                => ['else'],
-        'getterIfEmpty'             => ['default', 'empty', 'ifempty', 'isempty'],
-        'getterIfNotEmpty'          => ['!empty', 'notempty', 'ifnotempty', 'isnotempty'],
+        'getterIfEmpty'             => ['default', 'ifempty', 'isempty'],
+        'getterIfNotEmpty'          => ['ifnotempty', 'isnotempty'],
         'getterLength'              => ['length', 'len', 'strlen'],
     ];
 
@@ -124,6 +126,14 @@ class Filters {
         }
 
         return (!in_array($input, $parameter));
+    }
+
+    public function filterEmpty($input) {
+        return empty($input);
+    }
+
+    public function filterNotEmpty($input) {
+        return !empty($input);
     }
 
     public function modifierAppend($input, $parameter) {
@@ -353,7 +363,7 @@ class Filters {
         return html_entity_decode($input, ENT_QUOTES, $this->encoding);
     }
 
-    public function modifierSpamProtect($input, $parameter) {
+    public function modifierSpamProtect($input) {
         return str_replace(['@', '.'], ['&#64;', '&#46;'], $input);
     }
 
