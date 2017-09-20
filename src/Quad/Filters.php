@@ -66,6 +66,8 @@ class Filters {
         'getterIfEmpty'             => ['default', 'ifempty', 'isempty'],
         'getterIfNotEmpty'          => ['ifnotempty', 'isnotempty'],
         'getterLength'              => ['length', 'len', 'strlen'],
+        'getterFirst'               => ['first'],
+        'getterLast'                => ['last'],
     ];
 
     public function __construct($api) {
@@ -413,6 +415,22 @@ class Filters {
 
     public function getterLength($input) {
         return mb_strlen($input, $this->encoding);
+    }
+
+    public function getterFirst($input) {
+        if (is_array($input)) {
+            return reset($input);
+        }
+
+        return $input;
+    }
+
+    public function getterLast($input) {
+        if (is_array($input)) {
+            return end($input);
+        }
+
+        return $input;
     }
 
 }
