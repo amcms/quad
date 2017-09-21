@@ -1,6 +1,6 @@
 <?php
 
-    namespace Amcms\Quad;
+    namespace Amcms\Quad\Exceptions;
 
     use \Nette\Utils\Tokenizer;
 

@@ -14,12 +14,14 @@ class Quad {
 
     private $placeholders = [];
 
-    public function __construct($options) {
+    public function __construct($options = []) {
         $this->translator = new Translator;
 
         foreach ($options as $option => $value) {
             $this->setOption($option, $value);
         }
+
+        new Filters($this);
     }
 
     public function setOption($option, $value) {
@@ -33,7 +35,7 @@ class Quad {
     /**
      * Loads template contents, if $template is filename,
      * or removes binding if it present
-     * 
+     *
      * @param  string $template Template name/content
      * @return string
      */
@@ -46,58 +48,71 @@ class Quad {
                 }
 
                 default: {
-                    throw new \Exception("Unknown binding '" . $matches[1] . "'", 1);
+                    throw new Exceptions\UnknownBindingException("Unknown binding '" . $matches[1] . "'");
                 }
             }
         } else {
             $filename = $template;
-            $template = @file_get_contents($filename);
 
-            if ($template === false) {
-                throw new \Exception("Cannot read template '" . $filename . "'", 1);
+            if (!is_dir($filename) && is_readable($filename)) {
+                $template = file_get_contents($filename);
+            } else {
+                throw new Exceptions\FileNotFoundException("Cannot read template '" . $filename . "'");
             }
         }
 
         return $template;
     }
 
+    public function getCompiledTemplateName($template) {
+        $cache = $this->getOption('cache');
+
+        $hash  = hash('sha256', $template) . '.php';
+        $parts = [substr($hash, 0, 1), substr($hash, 1, 1)];
+
+        return realpath($cache) . '/' . implode('/', $parts) . '/' . $hash;
+    }
+
+    public function createDirectories($file) {
+        $file  = str_replace(DIRECTORY_SEPARATOR, '/', $file);
+        $parts = explode('/', pathinfo($file, PATHINFO_DIRNAME));
+        $path  = array_shift($parts);
+
+        foreach ($parts as $part) {
+            $path .= '/' . $part;
+
+            if (!file_exists($path)) {
+                if (@mkdir($path, 0700) === false ) {
+                    throw new Exceptions\FileSaveException("Cannot create directory '" . $path . "'");
+                }
+            }
+        }
+    }
+
     /**
      * Compiles template and/or returns filename of compiled php file
-     * 
+     *
      * @param  string $template Template content
      * @return string
      */
-    private function compile($template) {
+    public function compile($template) {
         $cache = $this->getOption('cache');
 
         if ($cache === false) {
             return $this->translator->parse($template);
         }
 
-        $hash  = hash('sha256', $template) . '.php';
-        $parts = [substr($hash, 0, 1), substr($hash, 1, 1)];
-        $file  = $cache . '/' . implode('/', $parts) . '/' . $hash;
+        $file = $this->getCompiledTemplateName($template);
 
         if (!file_exists($file)) {
-            $path = realpath($cache);
-
-            foreach ($parts as $part) {
-                $path .= '/' . $part;
-
-                if (!file_exists($path)) {
-                    if (@mkdir($path, 0700) === false ) {
-                        throw new \Exception("Cannot create directory '" . $path . "'", 1);
-                    }
-                }
-            }
-
+            $this->createDirectories($file);
             $output = $this->translator->parse($template);
 
             if (@file_put_contents($file, $output) === false) {
-                throw new \Exception("Cannot save compiled template '" . $file . "'", 1);
+                throw new Exceptions\FileSaveException("Cannot save compiled template '" . $file . "'");
             }
-        } elseif (!is_readable($file)) {
-            throw new \Exception("Compiled template '" . $file . "' exists but not readable", 1);
+        } elseif (is_dir($file) || !is_readable($file)) {
+            throw new Exceptions\FileNotFoundException("Compiled template '" . $file . "' exists but not readable");
         }
 
         return $file;
@@ -117,7 +132,7 @@ class Quad {
         if ($this->getOption('cache') !== false) {
             include($filename);
         } else {
-            eval(preg_replace('/<\?php (.+) \?>/s', '$1', $filename));
+            eval(preg_replace('/<\?php\s*(.+)$/s', '$1', $filename));
         }
 
         $output = ob_get_contents();
@@ -140,7 +155,7 @@ class Quad {
 
     /**
      * Render chunk
-     * 
+     *
      * @param  string $name
      * @param  array  $params
      * @return string
@@ -158,7 +173,7 @@ class Quad {
 
     /**
      * Runs snippet
-     * 
+     *
      * @param  string  $name
      * @param  array   $params
      * @param  boolean $cached
@@ -184,15 +199,26 @@ class Quad {
     }
 
     /**
+     * Removes placeholder from set
+     *
+     * @param string $name Name of the placeholder to unset
+     */
+    public function unsetPlaceholder($name) {
+        if (array_key_exists($name, $this->placeholders)) {
+            unset($this->palceholders[$name]);
+        }
+    }
+
+    /**
      * Returns value of key, that presents with $path
-     * 
+     *
      * @param  array $source
      * @param  array $path Array of keys for search in $source
      * @return mixed|null
      */
     private function getArrayAttribute($source, $path) {
         foreach ($path as $key) {
-            if (!array_key_exists($key, $source)) {
+            if (!isset($source[$key])) {
                 return null;
             }
 
@@ -204,7 +230,7 @@ class Quad {
 
     /**
      * If placeholder not exists, method should return null
-     * 
+     *
      * @param  string|array $name
      * @return mixed|null
      */
@@ -232,10 +258,10 @@ class Quad {
      * Returns value of field of current document.
      * If $binding is not null, value must be fetched
      * for document from $binding and $binding_arg.
-     * For example, 
+     * For example,
      * [*pagetitle@parent*] - from parent document,
      * [*pagetitle@uparent(2)*] - from 2-level parent, etc.
-     * 
+     *
      * @param  string $name Document field name
      * @param  string $binding Name of binding
      * @param  string $binding_arg Binding argument
@@ -267,20 +293,28 @@ class Quad {
      * @return string
      */
     public function applyFilters($input, $filters = []) {
+        $value = $input;
+
         foreach ($filters as $filter) {
             if (!array_key_exists($filter[0], $this->filters)) {
                 continue;
             }
 
-            $function = $this->filters[ $filter[0] ];
-            $input = $function($input, $filter[1]);
-
-            if ($input === null) {
-                break;
+            if ($filter[0] == 'then' && $value === false) {
+                continue;
             }
+
+            if ($filter[0] == 'else' && ($value === true || $input === true)) {
+                continue;
+            }
+
+            $function = $this->filters[ $filter[0] ];
+
+            $input = $value;
+            $value = call_user_func_array($function, [$input, $filter[1]]);
         }
 
-        return $input;
+        return $value;
     }
 
     public function registerFilter($name, $function) {

@@ -2,7 +2,7 @@
 
 namespace Amcms\Quad;
 
-use \Nette\Utils\Tokenizer;
+use Nette\Utils\Tokenizer;
 
 class Translator {
 
@@ -19,17 +19,27 @@ class Translator {
     const T_BINDING            = 21;    const T_COMMA            = 22;
     const T_COLON              = 23;    const T_NEGATION         = 24;
     const T_ROUND_OPEN         = 25;    const T_ROUND_CLOSE      = 26;
-    const T_DOT                = 27;
+    const T_DOT                = 27;    const T_MINUS            = 28;
+    const T_CONTROL_START      = 29;    const T_CONTROL_END      = 30;
+    const T_COMMENT_START      = 31;    const T_COMMENT_END      = 32;
     const T_WHITESPACE         = 1000;  const T_STRING           = 1001;
     const T_ANYTHING           = 2000;
 
+    const C_STRING      = 1;
+    const C_CONTROL     = 2;
+    const C_INSTRUCTION = 3;
+
     const MODE_PHP  = 1;
     const MODE_MODX = 2;
+
+    const TYPE  = 'type';
+    const VALUE = 'value';
 
     /**
      * Token symbols, used for error message only
      */
     private $symbols = [
+        self::T_CONTROL_START     => '{%',     self::T_CONTROL_END     => '%}',
         self::T_SNIPPET_START     => '[[',     self::T_SNIPPET_END     => ']]',
         self::T_NC_SNIPPET_START  => '[!',     self::T_NC_SNIPPET_END  => '!]',
         self::T_FIELD_START       => '[*',     self::T_FIELD_END       => '*]',
@@ -43,7 +53,8 @@ class Translator {
         self::T_STRING            => 'word',   self::T_ANYTHING        => 'any',
         self::T_COLON             => ':',      self::T_NEGATION        => '!',
         self::T_ROUND_OPEN        => '(',      self::T_ROUND_CLOSE     => ')',
-        self::T_DOT               => '.',
+        self::T_DOT               => '.',      self::T_MINUS           => '-',
+        self::T_COMMENT_START     => '[-',     self::T_COMMENT_END     => '-]',
     ];
 
     /**
@@ -111,8 +122,15 @@ class Translator {
      */
     private $level = 0;
 
+    /**
+     * List of registered control tags
+     * @var array
+     */
+    private $controls = [];
+
     public function __construct() {
         $this->tokenizer = new Tokenizer([
+            self::T_CONTROL_END       => '%\}',   self::T_CONTROL_START   => '\{%\\s*[a-z]+\\s*',
             self::T_SNIPPET_START     => '\[\[',  self::T_SNIPPET_END     => '\]\]',
             self::T_NC_SNIPPET_START  => '\[\!',  self::T_NC_SNIPPET_END  => '\!\]',
             self::T_FIELD_START       => '\[\*',  self::T_FIELD_END       => '\*\]',
@@ -120,30 +138,45 @@ class Translator {
             self::T_CONFIG_START      => '\[\(',  self::T_CONFIG_END      => '\)\]',
             self::T_CHUNK_START       => '\{\{',  self::T_CHUNK_END       => '\}\}',
             self::T_LINK_START        => '\[\~',  self::T_LINK_END        => '\~\]',
+            self::T_COMMENT_START     => '\[-',   self::T_COMMENT_END     => '-\]',
             self::T_ROUND_OPEN        => '\(',    self::T_ROUND_CLOSE     => '\)',
             self::T_QUESTION          => '\?',    self::T_AMPERSAND       => '\&',
             self::T_BINDING           => '@',     self::T_QUOTE           => '`',
             self::T_EQUAL             => '=',     self::T_COLON           => ':',
             self::T_NEGATION          => '\!',    self::T_DOT             => '\.',
+            self::T_MINUS             => '-',
             self::T_STRING            => '\\w+',  self::T_WHITESPACE      => '[\\s\\n\\r]+',
-            self::T_ANYTHING          => '.',
-        ]);
+            self::T_ANYTHING          => '.+?',
+        ], 'u');
+
+        $this->registerControl('if', Controls\IfControl::class);
+        $this->registerControl('for', Controls\ForControl::class);
+        $this->registerControl('switch', Controls\SwitchControl::class);
+    }
+
+    public function getIterator() {
+        return $this->iterator;
     }
 
     /**
      * Start point, makes compiled template
-     * 
+     *
      * @param  string $input Source template
      * @return string
      */
     public function parse($input) {
         $this->iterator = new TokenIterator($this->tokenizer->tokenize($input));
         $this->level = 0;
-        $this->source = $input;
+
+        foreach ($this->controls as $control) {
+            if (!is_string($control)) {
+                $control->setIterator($this->iterator);
+            }
+        }
 
         try {
-            return $this->parseString($inside = false);
-        } catch (UnexpectedTokenException $e) {
+            return "<?php\n" . $this->parseString();
+        } catch (Exceptions\UnexpectedTokenException $e) {
             $tokens = $e->getExpectedTokens();
             $tokens = array_reverse($tokens);
             $offset = $e->getOffset();
@@ -158,29 +191,47 @@ class Translator {
                 $output[] = $this->symbols[$token];
             }
 
-            return "Unexpected token '" . $e->getToken() . "' at offset " . $offset . 
-                " near '" . substr($input, $offset, 10) . "...', expected '" . implode($output) . "'!";
+            return "Unexpected token '" . $e->getToken() . "' at offset " . $offset . " near '" .
+                str_replace(["\n", "\r"], ['\\n', '\\r'], substr($input, $offset, 10)) .
+                "...', expected '" . implode($output) . "'!";
         }
+    }
+
+    public function parseString() {
+        $result = '';
+
+        while ($this->iterator->isNext()) {
+            if ($this->iterator->isNext(self::T_CONTROL_START)) {
+                $result .= $this->parseControl($this->iterator->nextValue());
+                continue;
+            }
+
+            $result .= $this->parseInstruction([self::T_CONTROL_START], false);
+        }
+
+        return $result;
     }
 
     /**
      * Parse all instructions on same level
-     * 
-     * @param  boolean $inside Is it inline template?
+     *
+     * @param  array $endTag Array of endtags of instruction
+     * @param  boolean $inside Is it inside parent instruction?
      * @return string
      */
-    private function parseString($inside = true, $endTag = []) {
+    public function parseInstruction($endTag = [], $inside = true) {
         $result = [];
 
         $this->level++;
 
         while ($this->iterator->isNext()) {
-            if ($this->level > 1 ) {
-                foreach ($endTag as $tag) {
-                    if ($this->iterator->isNext($tag)) {
-                        $this->level--;
-                        return implode($this->mode == self::MODE_MODX ? '' : ' . ', $result);
-                    }
+            foreach ($endTag as $tag) {
+                if ($this->iterator->isNext($tag)) {
+                    $concatenate = $this->level > 0;
+
+                    $this->level--;
+
+                    return $this->compile($result, $inside, !$inside);
                 }
             }
 
@@ -191,19 +242,43 @@ class Translator {
                 case self::T_SNIPPET_START:
                 case self::T_NC_SNIPPET_START:
                 case self::T_CHUNK_START: {
-                    $value = $this->parseSnippet($token[Tokenizer::TYPE], $this->brackets[ $token[Tokenizer::TYPE] ]);
+                    $value = [
+                        self::TYPE  => self::C_INSTRUCTION,
+                        self::VALUE => $this->parseSnippet($token[Tokenizer::TYPE], $this->brackets[ $token[Tokenizer::TYPE] ]),
+                    ];
+
                     break;
                 }
 
                 case self::T_CONFIG_START:
                 case self::T_PLACEHOLDER_START:
                 case self::T_FIELD_START: {
-                    $value = $this->parseVariable($token[Tokenizer::TYPE], $this->brackets[ $token[Tokenizer::TYPE] ]);
+                    $value = [
+                        self::TYPE  => self::C_INSTRUCTION,
+                        self::VALUE => $this->parseVariable($token[Tokenizer::TYPE], $this->brackets[ $token[Tokenizer::TYPE] ]),
+                    ];
+
                     break;
                 }
 
                 case self::T_LINK_START: {
-                    $value = $this->parseMakeUrl();
+                    $value = [
+                        self::TYPE  => self::C_INSTRUCTION,
+                        self::VALUE => $this->parseMakeUrl(),
+                    ];
+
+                    break;
+                }
+
+                case self::T_COMMENT_START: {
+                    $this->iterator->nextUntil(self::T_COMMENT_END);
+                    $this->iterator->nextToken();
+
+                    $value = [
+                        self::TYPE  => self::C_STRING,
+                        self::VALUE => '',
+                    ];
+
                     break;
                 }
 
@@ -218,37 +293,42 @@ class Translator {
                     )) {
                         $openTag  = $this->iterator->nextToken();
                         $closeTag = $this->brackets[ $openTag[Tokenizer::TYPE] ];
-                        $value    = $openTag[Tokenizer::VALUE] . $this->iterator->joinUntil($closeTag) . $this->iterator->nextValue();
 
-                        if ($this->mode == self::MODE_PHP) {
-                            $value = "'" . $this->escape($value) . "'";
-                        }
+                        $value = [
+                            self::TYPE  => self::C_STRING,
+                            self::VALUE => $openTag[Tokenizer::VALUE] . $this->iterator->joinUntil($closeTag) . $this->iterator->nextValue(),
+                        ];
+
                         break;
+                    } else if ($this->iterator->isNext(self::T_BINDING)) {
+                        $this->iterator->nextToken();
+                        continue;
                     }
                 }
 
                 default: {
-                    $value = $token[Tokenizer::VALUE] . $this->iterator->joinUntil(
-                        self::T_SNIPPET_START,     self::T_SNIPPET_END, 
-                        self::T_NC_SNIPPET_START,  self::T_NC_SNIPPET_END, 
-                        self::T_FIELD_START,       self::T_FIELD_END, 
-                        self::T_PLACEHOLDER_START, self::T_PLACEHOLDER_END,
-                        self::T_CONFIG_START,      self::T_CONFIG_END,
-                        self::T_CHUNK_START,       self::T_CHUNK_END, 
-                        self::T_LINK_START,        self::T_LINK_END,
-                        self::T_ROUND_OPEN,        self::T_ROUND_CLOSE,
-                        self::T_QUOTE,             self::T_COLON,
-                        self::T_QUESTION,          self::T_AMPERSAND,
-                        self::T_BINDING,           self::T_DOT
-                    );
-
-                    if ($this->mode == self::MODE_PHP) {
-                        $value = "'" . $this->escape($value) . "'";
-                    }
+                    $value = [
+                        self::TYPE  => self::C_STRING,
+                        self::VALUE => $token[Tokenizer::VALUE] . $this->iterator->joinUntil(
+                            self::T_CONTROL_START,     self::T_CONTROL_END,
+                            self::T_SNIPPET_START,     self::T_SNIPPET_END,
+                            self::T_NC_SNIPPET_START,  self::T_NC_SNIPPET_END,
+                            self::T_FIELD_START,       self::T_FIELD_END,
+                            self::T_PLACEHOLDER_START, self::T_PLACEHOLDER_END,
+                            self::T_CONFIG_START,      self::T_CONFIG_END,
+                            self::T_CHUNK_START,       self::T_CHUNK_END,
+                            self::T_LINK_START,        self::T_LINK_END,
+                            self::T_COMMENT_START,     self::T_COMMENT_END,
+                            self::T_ROUND_OPEN,        self::T_ROUND_CLOSE,
+                            self::T_QUOTE,             self::T_COLON,
+                            self::T_QUESTION,          self::T_AMPERSAND,
+                            self::T_BINDING,           self::T_DOT
+                        ),
+                    ];
                 }
             }
 
-            if ($value != '') {
+            if (!empty($value) && $value[self::VALUE] != '') {
                 $result[] = $value;
             }
         }
@@ -257,29 +337,29 @@ class Translator {
             throw new \Exception('Unexpected end of template', 1);
         }
 
-        return '<?php echo ' . implode(', ', $result) . '; ?>';
+        return $this->compile($result, false, true);
     }
 
     /**
      * Make URL
-     * 
+     *
      * @return string
      */
     private function parseMakeUrl() {
-        $input = $this->parseString($inside = true, $endTag = [self::T_LINK_END]);
+        $input = $this->parseInstruction([self::T_LINK_END]);
         $this->iterator->expect(self::T_LINK_END);
         return sprintf($this->instructions[$this->mode][self::T_LINK_START], $input);
     }
 
     /**
      * Get placeholder, document field or setting value
-     * 
+     *
      * @param  int $openTag  Type of opening tag
      * @param  int $closeTag Type of closing tag
      * @return string
      */
     private function parseVariable($openTag, $closeTag) {
-        $name = $this->parseString($inside = true, $endTag = [$closeTag, self::T_COLON, self::T_BINDING, self::T_DOT]);
+        $name = $this->parseInstruction([$closeTag, self::T_COLON, self::T_BINDING, self::T_DOT]);
 
         // Parsing instruction [+key.key1.key2+]
         // for nesting arrays
@@ -288,7 +368,7 @@ class Translator {
 
             while ($this->iterator->isNext(self::T_DOT)) {
                 $this->iterator->nextToken();
-                $name[] = $this->parseString($inside = true, $endTag = [$closeTag, self::T_COLON, self::T_BINDING, self::T_DOT]);
+                $name[] = $this->parseInstruction([$closeTag, self::T_COLON, self::T_BINDING, self::T_DOT]);
             }
         }
 
@@ -302,7 +382,7 @@ class Translator {
 
             if ($this->iterator->isNext(self::T_ROUND_OPEN)) {
                 $this->iterator->nextToken();
-                $binding['value'] = $this->parseString($inside = true, $endTag = [self::T_ROUND_CLOSE]);
+                $binding['value'] = $this->parseInstruction([self::T_ROUND_CLOSE]);
                 $this->iterator->expect(self::T_ROUND_CLOSE);
             } else {
                 $binding['value'] = null;
@@ -367,7 +447,7 @@ class Translator {
         if ($this->iterator->isNext(self::T_EQUAL)) {
             $this->iterator->nextToken(self::T_EQUAL);
             $this->iterator->expect(self::T_QUOTE);
-            $value = $this->parseString($inside = true, $endTag = [self::T_QUOTE]);
+            $value = $this->parseInstruction([self::T_QUOTE]);
             $this->iterator->expect(self::T_QUOTE);
         } else {
             $value = null;
@@ -382,7 +462,7 @@ class Translator {
         do {
             if (!$this->iterator->isNext(self::T_COLON)) {
                 break;
-            } 
+            }
             $filters[] = $this->parseFilter();
         } while ($this->iterator->isNext());
 
@@ -391,7 +471,7 @@ class Translator {
 
     /**
      * Parse one parameter of snippet, chunk
-     * 
+     *
      * @return string
      */
     private function parseSnippetParameter() {
@@ -407,11 +487,15 @@ class Translator {
             $this->iterator->nextToken();
         } else {
             if ($this->iterator->isNext(self::T_BINDING)) {
-                $this->mode = self::MODE_MODX;
-                $value = "'" . $this->escape($this->parseString($inside = true, $endTag = [self::T_QUOTE])) . "'";
-                $this->mode = self::MODE_PHP;
+                if ($this->mode == self::MODE_MODX) {
+                    $value = $this->parseInstruction([self::T_QUOTE]);
+                } else {
+                    $this->mode = self::MODE_MODX;
+                    $value = "'" . $this->escape($this->parseInstruction([self::T_QUOTE])) . "'";
+                    $this->mode = self::MODE_PHP;
+                }
             } else {
-                $value = $this->parseString($inside = true, $endTag = [self::T_QUOTE]);
+                $value = $this->parseInstruction([self::T_QUOTE]);
             }
         }
 
@@ -431,14 +515,21 @@ class Translator {
 
     /**
      * Parse snippet, chunk
-     * 
+     *
      * @param  int $openTag  Type of opening tag
      * @param  int $closeTag Type of closing tag
      * @return string
      */
     private function parseSnippet($openTag, $closeTag) {
+        $isComment = false;
+
+        if ($this->iterator->isNext(self::T_MINUS)) {
+            $this->iterator->nextToken();
+            $isComment = true;
+        }
+
         $result = [
-            'name'   => $this->parseString($inside = true, $endTag = [$closeTag, self::T_QUESTION, self::T_WHITESPACE, self::T_AMPERSAND, self::T_COLON]),
+            'name'   => $this->parseInstruction([$closeTag, self::T_QUESTION, self::T_WHITESPACE, self::T_AMPERSAND, self::T_COLON]),
             'type'   => $openTag,
             'cached' => $closeTag == self::T_SNIPPET_START,
             'params' => [],
@@ -471,8 +562,12 @@ class Translator {
 
         $this->iterator->expect($closeTag);
 
+        if ($isComment) {
+            return "''";
+        }
+
         $output = $result['name'];
-        
+
         if (!empty($filters) && $this->mode == self::MODE_MODX) {
             foreach ($filters as $filter) {
                 $output .= ':' . $filter['name'];
@@ -503,12 +598,85 @@ class Translator {
 
     /**
      * Escapes string
-     * 
+     *
      * @param  string $string Input
      * @return string
      */
     private function escape($string) {
         return str_replace("'", "\\'", $string);
+    }
+
+    public function compile($parts, $concatenate = false, $echo = false) {
+        $output = '';
+
+        foreach ($parts as $i => $part) {
+            if (is_string($part)) {
+                $output .= $part;
+                continue;
+            }
+
+            if ($part[self::TYPE] == self::C_CONTROL || $this->mode == self::MODE_MODX) {
+                $output .= $part[self::VALUE];
+                continue;
+            }
+
+            if ($part[self::TYPE] == self::C_STRING) {
+                $part[self::VALUE] = "'" . $this->escape($part[self::VALUE]) . "'";
+            }
+
+            if ($concatenate) {
+                if ($i) {
+                    $output .= ' . ';
+                }
+
+                $out = $part[self::VALUE];
+            } else {
+                $out = $part[self::VALUE] . ";\n";
+            }
+
+            if ($echo) {
+                $out = 'echo ' . $out;
+            }
+
+            $output .= $out;
+        }
+
+        return $output;
+    }
+
+    public function registerControl($name, $class) {
+        $this->controls[$name] = $class;
+    }
+
+    public function parseControl($token) {
+        $name = $this->parseControlTag($token);
+
+        if (!array_key_exists($name, $this->controls)) {
+            throw new \Exception("Unknown control tag '$name'");
+        }
+
+        if (is_string($this->controls[$name])) {
+            $this->controls[$name] = new $this->controls[$name]($this);
+        }
+
+        return $this->controls[$name]->parse();
+    }
+
+    public function parseControlTag($token = false) {
+        if ($this->mode == self::MODE_MODX) {
+            throw new \Exception("Control tags not allowed in inline templates");
+        }
+
+        if ($this->level > 1) {
+            throw new \Exception("Control tags not allowed in nested instructions");
+        }
+
+        if ($token === false) {
+            $token = $this->iterator->nextValue();
+        }
+
+        preg_match('/\{%\s*([a-z]+)/', $token, $name);
+        return $name[1];
     }
 
 }
