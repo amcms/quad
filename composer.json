@@ -2,6 +2,15 @@
     "name": "amcms/quad",
     "type": "library",
     "description": "Amcms Template Engine",
+    "keywords": ["modx", "templating", "amcms"],
+    "homepage": "https://github.com/amcms/quad",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mikhail Noskov",
+            "homepage": "https://github.com/mnoskov"
+        }
+    ],
     "autoload": {
         "psr-4": {
             "Amcms\\Quad\\": "src/Quad"
