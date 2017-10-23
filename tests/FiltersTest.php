@@ -62,4 +62,32 @@ class FiltersTest extends TestCase {
         $this->assertEquals(false, $this->filters->filterIn('a', 'A,b,c'));
     }
 
+    public function testFilterNotIn() {
+        $this->assertEquals(true, $this->filters->filterNotIn('a', 'abc'));
+        $this->assertEquals(false, $this->filters->filterNotIn('a', 'a,b,c'));
+        $this->assertEquals(true, $this->filters->filterNotIn('a', 'A,b,c'));
+    }
+
+    public function testFilterEmpty() {
+        $this->assertEquals(false, $this->filters->filterEmpty(1));
+        $this->assertEquals(true, $this->filters->filterEmpty(0));
+        $this->assertEquals(true, $this->filters->filterEmpty(null));
+    }
+
+    public function testFilterNotEmpty() {
+        $this->assertEquals(true, $this->filters->filterNotEmpty(1));
+        $this->assertEquals(false, $this->filters->filterNotEmpty(0));
+        $this->assertEquals(false, $this->filters->filterNotEmpty(null));
+    }
+
+    public function testModifierAppend() {
+        $this->assertEquals('12', $this->filters->modifierAppend(1, 2));
+        $this->assertEquals('12', $this->filters->modifierAppend(1, '2'));
+        $this->assertEquals('12', $this->filters->modifierAppend('1', 2));
+        $this->assertEquals('12', $this->filters->modifierAppend('1', '2'));
+        $this->assertEquals('1', $this->filters->modifierAppend(1, null));
+        $this->assertEquals('1', $this->filters->modifierAppend(1, [2]));
+        $this->assertEquals([1], $this->filters->modifierAppend([1], [2]));
+    }
+
 }
