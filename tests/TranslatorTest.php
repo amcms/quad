@@ -3,8 +3,24 @@
 use PHPUnit\Framework\TestCase;
 
 class Parser extends \Amcms\Quad\Quad {
+    private $lang = [
+        'user' => [
+            1      => 'user',
+            'many' => 'users',
+        ],
+        'lang' => 'eng',
+    ];
+
     public function getField($name, $binding = null, $binding_arg = null) {
         return $name . $binding . $binding_arg;
+    }
+
+    public function getLang($name) {
+        if (isset($this->lang[$name])) {
+            return $this->lang[$name];
+        }
+
+        return null;
     }
 }
 
@@ -183,6 +199,10 @@ class TranslatorTest extends TestCase {
             ['@CODE: {% switch `[+a+]` %}{% case 2 %}one{% endcase %}{% case 1 %}two{% endcase %}{% endswitch %}', 'two'],
             ['@CODE: {% switch [+a+] %}{% case `2` %}one{% endcase %}{% default %}error{% enddefault %}{% endswitch %}', 'error'],
             ['@CODE: {% switch [+b+] %}{% case [[getParam? &p=`2` &what=`value`]] %}right{% endcase %}{% endswitch %}', 'right'],
+            ['@CODE: [%lang%]', 'eng'],
+            ['@CODE: [%user:key=`1`%]', 'user'],
+            ['@CODE: [%user:key=`many`%]', 'users'],
+            ['@CODE: [%[%user:key=`1`%]:key=`many`%]', 'users'],
         ];
     }
 
