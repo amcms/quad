@@ -164,7 +164,7 @@ $api->parseChunk('chunk_name', ['param1' => 'value1', 'param2' => 'value2']);
 [!-snippet? &param1=`value1` &param2=`value2`!]
 ```
 
-### 4. Inline-шаблоны
+## 4. Inline-шаблоны
 
 Чтобы передать шаблон в сниппет напрямую, а не сохраняя в чанк, можно использовать приставку `@CODE`:
 
@@ -175,7 +175,45 @@ $api->parseChunk('chunk_name', ['param1' => 'value1', 'param2' => 'value2']);
 В inline-шаблонах не поддерживаются управляющие структуры и вложенные inline-шаблоны.
 В процессе компиляции inline-шаблоны проверяются наравне с другими элементами
 
-### 5. Фильтры, модификаторы
+## 5. Фильтры, модификаторы
 
 
+## 6. Управляющие структуры
 
+Управляющие структуры недоступны в inline-шаблонах и внутренних вызовах.
+
+### 6.1. Цикл for
+
+```
+{% for `item` in [[getItems]] %}
+    [+item+]
+    [+item_iteration+] - Номер итерации, начиная с 1
+    [+item_index+] - Номер итерации, начиная с 0
+{% endfor %}
+```
+
+### 6.2. Условие if
+
+```
+{% if [+value:is=`test`+] %}
+    value is test
+{% elseif [+value:is=`test2`+] %}
+    value is test2
+{% else %}
+    value is not test
+{% endif %}
+```
+
+### 6.3. Выбор switch
+
+```
+{% switch [+value+] %}
+    {% case `test` %}
+        value is test
+    {% endcase %}
+
+    {% default %}
+        value is not test
+    {% enddefault %}
+{% endswitch %}
+```
