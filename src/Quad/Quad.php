@@ -288,6 +288,14 @@ class Quad {
     }
 
     /**
+     * @param string $name
+     * @return mixed
+     */
+    public function getLang($name) {
+        return $name;
+    }
+
+    /**
      * @param  string $input   Input value
      * @param  array  $filters Array of pairs filter_name => filter_parameter
      * @return string

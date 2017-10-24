@@ -22,6 +22,7 @@ class Translator {
     const T_DOT                = 27;    const T_MINUS            = 28;
     const T_CONTROL_START      = 29;    const T_CONTROL_END      = 30;
     const T_COMMENT_START      = 31;    const T_COMMENT_END      = 32;
+    const T_LANG_START         = 33;    const T_LANG_END         = 34;
     const T_WHITESPACE         = 1000;  const T_STRING           = 1001;
     const T_ANYTHING           = 2000;
 
@@ -45,6 +46,7 @@ class Translator {
         self::T_FIELD_START       => '[*',     self::T_FIELD_END       => '*]',
         self::T_PLACEHOLDER_START => '[+',     self::T_PLACEHOLDER_END => '+]',
         self::T_CONFIG_START      => '[(',     self::T_CONFIG_END      => ')]',
+        self::T_LANG_START        => '[%',     self::T_LANG_END        => '%]',
         self::T_CHUNK_START       => '{{',     self::T_CHUNK_END       => '}}',
         self::T_LINK_START        => '[~',     self::T_LINK_END        => '~]',
         self::T_QUESTION          => '?',      self::T_AMPERSAND       => '&',
@@ -68,6 +70,7 @@ class Translator {
         self::T_PLACEHOLDER_START => self::T_PLACEHOLDER_END,
         self::T_CONFIG_START      => self::T_CONFIG_END,
         self::T_LINK_START        => self::T_LINK_END,
+        self::T_LANG_START        => self::T_LANG_END,
     ];
 
     /**
@@ -82,6 +85,7 @@ class Translator {
             self::T_PLACEHOLDER_START => '[+%s+]',
             self::T_CONFIG_START      => '[(%s)]',
             self::T_LINK_START        => '[~%s~]',
+            self::T_LANG_START        => '[%%%s%%]',
             'params_start'            => '? ',
             'params_delimiter'        => ' ',
             'params_end'              => '',
@@ -94,6 +98,7 @@ class Translator {
             self::T_PLACEHOLDER_START => '$api->getPlaceholder(%s)',
             self::T_CONFIG_START      => '$api->getConfig(%s)',
             self::T_LINK_START        => '$api->makeUrl(%s)',
+            self::T_LANG_START        => '$api->getLang(%s)',
             'params_start'            => ', [',
             'params_delimiter'        => ', ',
             'params_end'              => ']',
@@ -136,6 +141,7 @@ class Translator {
             self::T_FIELD_START       => '\[\*',  self::T_FIELD_END       => '\*\]',
             self::T_PLACEHOLDER_START => '\[\+',  self::T_PLACEHOLDER_END => '\+\]',
             self::T_CONFIG_START      => '\[\(',  self::T_CONFIG_END      => '\)\]',
+            self::T_LANG_START        => '\[%',   self::T_LANG_END        => '%\]',
             self::T_CHUNK_START       => '\{\{',  self::T_CHUNK_END       => '\}\}',
             self::T_LINK_START        => '\[\~',  self::T_LINK_END        => '\~\]',
             self::T_COMMENT_START     => '\[-',   self::T_COMMENT_END     => '-\]',
@@ -252,6 +258,7 @@ class Translator {
 
                 case self::T_CONFIG_START:
                 case self::T_PLACEHOLDER_START:
+                case self::T_LANG_START:
                 case self::T_FIELD_START: {
                     $value = [
                         self::TYPE  => self::C_INSTRUCTION,
@@ -289,6 +296,7 @@ class Translator {
                         self::T_CHUNK_START,
                         self::T_CONFIG_START,
                         self::T_PLACEHOLDER_START,
+                        self::T_LANG_START,
                         self::T_FIELD_START
                     )) {
                         $openTag  = $this->iterator->nextToken();
@@ -316,6 +324,7 @@ class Translator {
                             self::T_FIELD_START,       self::T_FIELD_END,
                             self::T_PLACEHOLDER_START, self::T_PLACEHOLDER_END,
                             self::T_CONFIG_START,      self::T_CONFIG_END,
+                            self::T_LANG_START,        self::T_LANG_END,
                             self::T_CHUNK_START,       self::T_CHUNK_END,
                             self::T_LINK_START,        self::T_LINK_END,
                             self::T_COMMENT_START,     self::T_COMMENT_END,

@@ -68,6 +68,7 @@ class Filters {
         'getterLength'              => ['length', 'len', 'strlen'],
         'getterFirst'               => ['first'],
         'getterLast'                => ['last'],
+        'getterKey'                 => ['key'],
     ];
 
     public function __construct($api = null) {
@@ -463,6 +464,14 @@ class Filters {
         }
 
         return $input;
+    }
+
+    public function getterKey($input, $parameter) {
+        if (is_array($input) && isset($input[$parameter])) {
+            return $input[$parameter];
+        }
+
+        return null;
     }
 
 }
