@@ -177,6 +177,86 @@ $api->parseChunk('chunk_name', ['param1' => 'value1', 'param2' => 'value2']);
 
 ## 5. Фильтры, модификаторы
 
+Фильтры и модификаторы служат для быстрого изменения вывода путем применения к нему различных функций, например, частыми задачами являются экранирование, проверка на пустоту, форматирование и т.п.
+
+Примеры применения фильтра:
+```
+[+value:escape+]
+[+value:append=`test`+] - модификатор с параметром
+[+value:append=`test`:escape+] - применение нескольких фильтров
+[*pagetitle@uparent(2):escape*] - применение модификатора совместно с привязкой поля
+
+[[snippet:escape? &param=`value`]] - применение модификатора к результату работы сниппета
+```
+
+<table>
+<tr><th colspan="3">Фильтры</th></tr>
+<tr><th>Название</th><th>Параметр</th><th>Назначение</th></tr>
+<tr><td>contains</td><td></td><td></td></tr>
+<tr><td>containsnot</td><td></td><td></td></tr>
+<tr><td>empty</td><td></td><td></td></tr>
+<tr><td>!empty, notempty</td><td></td><td></td></tr>
+<tr><td>gt, isgt, greaterthan, isgreaterthan</td><td></td><td></td></tr>
+<tr><td>gte, isgte, ge, eg, equalorgreaterthan, greaterthanorequalto</td><td></td><td></td></tr>
+<tr><td>in, inarray, in_array</td><td></td><td></td></tr>
+<tr><td>is, eq, equals, equalto, isequal, isequalto</td><td>string</td><td>Возвращает результат сравнения значения с параметром</td></tr>
+<tr><td>lt, islt, lessthan, lowerthan, islessthan, islowerthan</td><td></td><td></td></tr>
+<tr><td>lte, islte, le, el, lessthanorequalto, equaltoorlessthan</td><td></td><td></td></tr>
+<tr><td>ne, neq, not, isnot, isnt, notequals, notequalto</td><td></td><td></td></tr>
+<tr><td>notin, !in, !inarray, notinarray, !in_array</td><td></td><td></td></tr>
+<tr><th colspan="3">Модификаторы</th></tr>
+<tr><th>Название</th><th>Параметр</th><th>Назначение</th></tr>
+<tr><td>abs</td><td></td><td></td></tr>
+<tr><td>add, incr, increment, plus</td><td></td><td></td></tr>
+<tr><td>after, append</td><td></td><td></td></tr>
+<tr><td>capitalize, cap</td><td></td><td></td></tr>
+<tr><td>ceil</td><td></td><td></td></tr>
+<tr><td>dateformat, date_format, dateFormat, formatDate, format_date, date</td><td></td><td></td></tr>
+<tr><td>div, divide</td><td></td><td></td></tr>
+<tr><td>ellipsis</td><td></td><td></td></tr>
+<tr><td>e, esc, escape</td><td></td><td></td></tr>
+<tr><td>floor</td><td></td><td></td></tr>
+<tr><td>html_decode, decode_html, html_entity_decode</td><td></td><td></td></tr>
+<tr><td>htmlent, htmlentities</td><td></td><td></td></tr>
+<tr><td>htmlspecial, htmlspecchars, htmlspecialchars, hsc</td><td></td><td></td></tr>
+<tr><td>limit</td><td></td><td></td></tr>
+<tr><td>lcase, lowercase, strtolower, tolower, lower</td><td></td><td></td></tr>
+<tr><td>ltrim</td><td></td><td></td></tr>
+<tr><td>mod, modulus</td><td></td><td></td></tr>
+<tr><td>moneyformat, money_format</td><td></td><td></td></tr>
+<tr><td>mpe, multiply</td><td></td><td></td></tr>
+<tr><td>nl2br</td><td></td><td></td></tr>
+<tr><td>numberformat, number_format, numberFormat</td><td></td><td></td></tr>
+<tr><td>before, prepend</td><td></td><td></td></tr>
+<tr><td>replace</td><td></td><td></td></tr>
+<tr><td>reverse, strrev</td><td></td><td></td></tr>
+<tr><td>round</td><td></td><td></td></tr>
+<tr><td>rtrim</td><td></td><td></td></tr>
+<tr><td>spam_protect, spamprotect</td><td></td><td></td></tr>
+<tr><td>strip</td><td></td><td></td></tr>
+<tr><td>stripString, stripstring, stripstr, strip_string, strip_str</td><td></td><td></td></tr>
+<tr><td>striptags, stripTags, notags, strip_tags</td><td></td><td></td></tr>
+<tr><td>strtotime, totime</td><td></td><td></td></tr>
+<tr><td>subtract, decr, decrement, minus</td><td></td><td></td></tr>
+<tr><td>trim</td><td></td><td></td></tr>
+<tr><td>ucfirst</td><td></td><td></td></tr>
+<tr><td>ucwords</td><td></td><td></td></tr>
+<tr><td>ucase, uppercase, strtoupper, toupper, upper</td><td></td><td></td></tr>
+<tr><td>urldecode, url_decode, decode_url</td><td></td><td></td></tr>
+<tr><td>urlencode, url_encode, encode_url</td><td></td><td></td></tr>
+<tr><td>wordwrap</td><td></td><td></td></tr>
+<tr><td>wordwrapcut</td><td></td><td></td></tr>
+<tr><th colspan="3">Геттеры</th></tr>
+<tr><th>Название</th><th>Параметр</th><th>Назначение</th></tr>
+<tr><td>default, ifempty, isempty</td><td></td><td></td></tr>
+<tr><td>else</td><td></td><td></td></tr>
+<tr><td>first</td><td></td><td></td></tr>
+<tr><td>ifnotempty, isnotempty</td><td></td><td></td></tr>
+<tr><td>key</td><td></td><td></td></tr>
+<tr><td>last</td><td></td><td></td></tr>
+<tr><td>length, len, strlen</td><td></td><td></td></tr>
+<tr><td>then</td><td></td><td></td></tr>
+</table>
 
 ## 6. Управляющие структуры
 
