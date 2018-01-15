@@ -26,5 +26,5 @@ class Source
         }
     }
 
-    public function load(string $source) {}
+    public function load($source) {}
 }

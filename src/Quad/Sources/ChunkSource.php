@@ -4,7 +4,7 @@ namespace Amcms\Quad\Sources;
 
 class ChunkSource extends Source
 {
-    public function load(string $source)
+    public function load($source)
     {
         if (!preg_match('/\.tpl$/', $source)) {
             $source .= '.tpl';
