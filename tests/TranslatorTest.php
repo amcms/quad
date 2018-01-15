@@ -31,10 +31,18 @@ class TranslatorTest extends TestCase {
 
     public function setUp() {
         $this->parser = new Parser([
-            'cache'     => false,
-            'templates' => __DIR__ . '/templates',
-            'chunks'    => __DIR__ . '/templates/chunks',
+            'cache' => false,
         ]);
+
+        $this->parser->addSource(new \Amcms\Quad\Sources\FileSource($this->parser, [
+            'templates' => __DIR__ . '/templates',
+        ]));
+
+        $this->parser->addSource(new \Amcms\Quad\Sources\ChunkSource($this->parser, [
+            'templates' => __DIR__ . '/templates/chunks',
+        ]));
+
+        $this->parser->addSource(new \Amcms\Quad\Sources\CodeSource($this->parser));
 
         $this->parser->registerSnippet('getCacheMode', function($parameters, $cached) {
             return $cached ? 'cached' : 'uncached';

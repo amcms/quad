@@ -14,6 +14,10 @@ class Quad {
 
     private $placeholders = [];
 
+    private $sources = [];
+
+    private $defaultSource;
+
     public function __construct($options = []) {
         $this->translator = new Translator;
 
@@ -40,28 +44,22 @@ class Quad {
      * @return string
      */
     public function loadTemplate($template) {
-        if (strpos($template, '@') === 0 && preg_match('/@(\w+)[:\s]{1}\s*(.+)$/s', $template, $matches)) {
-            switch ($matches[1]) {
-                case 'CODE': {
-                    $template = $matches[2];
-                    break;
-                }
-
-                default: {
-                    throw new Exceptions\UnknownBindingException("Unknown binding '" . $matches[1] . "'");
-                }
-            }
-        } else {
-            $filename = $template;
-
-            if (!is_dir($filename) && is_readable($filename)) {
-                $template = file_get_contents($filename);
-            } else {
-                throw new Exceptions\FileNotFoundException("Cannot read template '" . $filename . "'");
-            }
+        if (empty($this->defaultSource)) {
+            $this->defaultSource = reset($this->sources);
         }
 
-        return $template;
+        $source = $this->defaultSource;
+        
+        if (strpos($template, '@') === 0 && preg_match('/@(\w+)[:\s]{1}\s*(.+)$/s', $template, $matches)) {
+            if (!isset($this->sources[$matches[1]])) {
+                throw new Exceptions\UnknownBindingException("Unknown binding '" . $matches[1] . "', you must provide source for this binding!");
+            }
+
+            $source   = $this->sources[$matches[1]];
+            $template = $matches[2];
+        }
+
+        return call_user_func([$source, 'load'], $template);
     }
 
     public function getCompiledTemplateName($template) {
@@ -153,6 +151,20 @@ class Quad {
         return $this->renderCompiledTemplate($compiled, $params);
     }
 
+    public function addSource($source, $default = false)
+    {
+        $name = get_class($source);
+        $name = explode('\\', $name);
+        $name = array_pop($name);
+        $name = strtoupper(str_replace('Source', '', $name));
+
+        $this->sources[$name] = $source;
+
+        if ($default) {
+            $this->defaultSource = $source;
+        }
+    }
+
     /**
      * Render chunk
      *
@@ -162,8 +174,9 @@ class Quad {
      */
     public function parseChunk($name, $params = []) {
         if (strpos($name, '@') !== 0) {
-            $name = $this->getOption('chunks') . '/' . $name . '.tpl';
+            $name = '@CHUNK: ' . $name;
         }
+        
         return $this->renderTemplate($name, $params);
     }
 

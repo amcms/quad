@@ -8,6 +8,9 @@ class QuadTest extends TestCase {
 
     public function setUp() {
         $this->quad = new \Amcms\Quad\Quad();
+
+        $this->quad->addSource(new \Amcms\Quad\Sources\FileSource($this->quad));
+        $this->quad->addSource(new \Amcms\Quad\Sources\CodeSource($this->quad));
     }
 
     public function testLoadTemplate() {
