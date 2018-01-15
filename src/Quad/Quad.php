@@ -142,10 +142,6 @@ class Quad {
     }
 
     public function renderTemplate($name, $params = []) {
-        if (strpos($name, '/') !== 0 && strpos($name, '@') !== 0) {
-            $name = $this->getOption('templates') . '/' . $name;
-        }
-
         $content  = $this->loadTemplate($name);
         $compiled = $this->compile($content);
         return $this->renderCompiledTemplate($compiled, $params);
