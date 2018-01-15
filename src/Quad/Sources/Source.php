@@ -4,8 +4,8 @@ namespace Amcms\Quad\Sources;
 
 class Source
 {
-    private $quad;
-    private $options = [];
+    protected $quad;
+    protected $options = [];
 
     public function setOption($option, $value)
     {
