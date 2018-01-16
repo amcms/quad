@@ -115,6 +115,7 @@ class TranslatorTest extends TestCase {
             ]]', 'cached'],
             ['@CODE: [!getCacheMode? &p=`[[getCacheMode]]`!]', 'uncached'],
             ['@CODE: [[getParam? &p=`1` &what=`name`]]', 'p'],
+            ['@CODE: [[getParam? &p=`1` &what=`name` &a = ``]]', 'p'],
             ['@CODE: [[getParam? &p=`1` &what=`value`]]', 1],
             ['@CODE: [[getParam? &p=`[!getCacheMode!]` &what=`value`]]', 'uncached'],
             ['@CODE: [[getParam:add=`[+a+]`? &p=`1` &what=`value`]]', 2],

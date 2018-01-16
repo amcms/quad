@@ -492,9 +492,7 @@ class Translator {
 
         $value = '';
 
-        if ($this->iterator->isNext(self::T_QUOTE)) {
-            $this->iterator->nextToken();
-        } else {
+        if (!$this->iterator->isNext(self::T_QUOTE)) {
             if ($this->iterator->isNext(self::T_BINDING)) {
                 if ($this->mode == self::MODE_MODX) {
                     $value = $this->parseInstruction([self::T_QUOTE]);
