@@ -44,10 +44,23 @@ class Api extends Amcms\Quad\Quad {
 }
 
 $api = new Api([
-    'templates' => __DIR__ . '/templates', // размещение шаблонов
-    'chunks'    => __DIR__ . '/chunks',    // размещение чанков
-    'cache'     => __DIR__ . '/cache',     // размещение скомпилированных шаблонов (или false)
+    'cache' => __DIR__ . '/cache', // размещение скомпилированных шаблонов (или false)
 ]);
+
+// первый добавленный источник шаблонов будет источником по умолчанию.
+// источник для @FILE
+$api->addSource(new \Amcms\Quad\Sources\FileSource($api, [
+    'templates' => __DIR__ . '/templates',
+]));
+
+// также, чтобы указать источник по умолчанию, можно указать второй параметр как true.
+// источник для @CODE
+$api->addSource(new \Amcms\Quad\Sources\CodeSource($api), true);
+
+// источник для @CHUNK
+$api->addSource(new \Amcms\Quad\Sources\ChunkSource($api, [
+    'templates' => __DIR__ . '/templates/chunks',
+]));
 ```
 
 После инициализации система должна зарегистрировать все используемые сниппеты и модификаторы:
