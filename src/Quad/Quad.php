@@ -4,19 +4,19 @@ namespace Amcms\Quad;
 
 class Quad {
 
-    private $translator;
+    protected $translator;
 
-    private $snippets = [];
+    protected $snippets = [];
 
-    private $filters = [];
+    protected $filters = [];
 
-    private $values = [];
+    protected $values = [];
 
-    private $placeholders = [];
+    protected $placeholders = [];
 
-    private $sources = [];
+    protected $sources = [];
 
-    private $defaultSource;
+    protected $defaultSource;
 
     public function __construct($options = []) {
         $this->translator = new Translator;
