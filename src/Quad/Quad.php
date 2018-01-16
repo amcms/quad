@@ -37,18 +37,30 @@ class Quad {
     }
 
     /**
-     * Loads template contents, if $template is filename,
-     * or removes binding if it present
+     * Loads template contents
      *
-     * @param  string $template Template name/content
+     * @param  string $template Template name
+     * @param  string|null $source Source of template
      * @return string
      */
-    public function loadTemplate($template) {
+    public function loadTemplate($template, $source = null) {
         if (empty($this->defaultSource)) {
             $this->defaultSource = reset($this->sources);
         }
 
-        $source = $this->defaultSource;
+        if ($source !== null) {
+            $source = strtoupper($source);
+
+            if (isset($this->sources[$source])) {
+                $source = $this->sources[$source];
+            } else {
+                $source = null;
+            }
+        }
+
+        if (empty($source)) {
+            $source = $this->defaultSource;
+        }
         
         if (strpos($template, '@') === 0 && preg_match('/@(\w+)[:\s]{1}\s*(.+)$/s', $template, $matches)) {
             if (!isset($this->sources[$matches[1]])) {
@@ -141,8 +153,8 @@ class Quad {
         return $output;
     }
 
-    public function renderTemplate($name, $params = []) {
-        $content  = $this->loadTemplate($name);
+    public function renderTemplate($name, $params = [], $source = null) {
+        $content  = $this->loadTemplate($name, $source);
         $compiled = $this->compile($content);
         return $this->renderCompiledTemplate($compiled, $params);
     }
@@ -169,11 +181,7 @@ class Quad {
      * @return string
      */
     public function parseChunk($name, $params = []) {
-        if (strpos($name, '@') !== 0) {
-            $name = '@CHUNK: ' . $name;
-        }
-        
-        return $this->renderTemplate($name, $params);
+        return $this->renderTemplate($name, $params, 'CHUNK');
     }
 
     public function clearCache() {
